@@ -130,7 +130,7 @@
                         var event = this._eeEvents[eventName]
                         if ( !event )
                           return this
-                        for ( var i=0, l=event.length; i<len; i++ )
+                        for ( var i=0, l=event.length; i<l; i++ )
                           if ( event[i].is(eventCallback) ){
                             event.splice(i,1)
                             if (!!all)
