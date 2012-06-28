@@ -6,6 +6,8 @@
         this.publicStaticProperty = "public static property"
         var privateStaticProperty = "private static property"
         
+        // $ is a helper library
+        
         return {
             _construct : function(){
                 // constructor
@@ -24,8 +26,8 @@
         }
     })
     
-    var mymodule = new MyModule // logs private static property
-    var mymodulebis = new MyModuleBis // logs private static property
+    var mymodule = new MyModule // logs "private static property"
+    var mymodulebis = new MyModuleBis // logs "private static property"
     
     mymodule.myPublicPropertyB // b
     mymodule.myPublicPropertyC // undefined
