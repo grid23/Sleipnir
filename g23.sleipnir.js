@@ -66,7 +66,7 @@
                     }
                 }
 
-              , mix : function(){
+              , mix : function mix(){
                     var o
                     if ( $.is.array(arguments[0]) )
                       o = []
@@ -79,7 +79,7 @@
                       (function(t){
                           for ( var p in t ) if ( t.hasOwnProperty(p) )
                             if ( $.is.object(t[p]) || $.is.array(t[p]) )
-                              o[p] = mixin(t[p])
+                              o[p] = mix(t[p])
                             else
                               o[p] = t[p]
                       }(arguments[i]))
@@ -193,7 +193,7 @@
                         heritage[i].call(scope)
                 }
               , DNA = function(scope, self, heritage){
-                    var mixins = []
+                    var mixins = [scope.prototype]
                     for ( var i=0, l=heritage.length; i<l; i++ )
                       if ( $.is.array(heritage[i]) )
                         mixins.push((heritage[i][0].prototype || {}))
@@ -203,7 +203,7 @@
                     scope.prototype = $.mix.apply(null, mixins)
                 }
             return function(){
-                var heritage = $.args.unshift(arguments, EventEmitter) //all objects are instance of EventEmitter
+                var heritage = $.args.toArray(arguments) //all objects are instance of EventEmitter
                   , Egg = function(){
                         EventEmitter.call(this)
                         inherit(this, heritage)
