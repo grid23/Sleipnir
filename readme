@@ -24,8 +24,8 @@
         }
     })
     
-    var mymodule = new MyModule
-    var mymodulebis = new MyModuleBis
+    var mymodule = new MyModule // logs private static property
+    var mymodulebis = new MyModuleBis // logs private static property
     
     mymodule.myPublicPropertyB // b
     mymodule.myPublicPropertyC // undefined
@@ -35,4 +35,5 @@
     mymodulebis.myPublicPropertyC // c
     
     MyModule.publicStaticProperty // public static property
+    mymodule.publicStaticProperty // undefined
     MyModuleBis.publicStaticProperty // undefined
