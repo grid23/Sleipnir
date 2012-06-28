@@ -2,15 +2,15 @@
     var 
         _Sleipnir = root.Sleipnir
       , Sleipnir = root.Sleipnir = {}
-      
+
       , document = root.document
-      
+
       , $ = (function(){
             var
                 slice = Array.prototype.slice
               , unshift = Array.prototype.unshift
               , toString = Object.prototype.toString
-              
+
               , is = (function(){
                     var isNative = function(fn){
                         return typeof fn == "function" && fn.toString().match(/\s\[native code\]\s/)
@@ -54,7 +54,7 @@
                 }())
             return {
                 is : is
-              
+
               , args : {
                     toArray : function(args, from, to){
                         return slice.call(args, from, to)
@@ -65,7 +65,7 @@
                         return arr
                     }
                 }
-              
+
               , mix : function(){
                     var o
                     if ( $.is.array(arguments[0]) )
@@ -74,7 +74,7 @@
                       o = {}
                     else
                       throw new Error('bad argument type')
-                        
+
                     for (var i=0, len=arguments.length; i<len; i++)  if ( (arguments[i]).constructor === (o).constructor  )
                       (function(t){
                           for ( var p in t ) if ( t.hasOwnProperty(p) )
@@ -87,21 +87,21 @@
                 }
             }
         }())
-      
-      
+
+
       , EventEmitter = (function(){
             var
                 setImmediate = (function(){
                     var queue = []
                       , hasSI = !!(root.setImmediate || root.msSetImmediate)
                       , hasPM = root.addEventListener && root.postMessage
-        
+
                     if ( !hasSI && hasPM )
                       root.addEventListener('message', function(e){
                           if ( e.data === "__events_immediate__" ) if (queue.length)
                             queue.shift()() // take the first fn from the array and execute it
                       }, false)
-        
+
                     return root.setImmediate || root.msSetImmediate ||
                            (function(){
                                if ( hasPM )
@@ -148,7 +148,7 @@
                         return this
                     }
                 }
-        
+
               , EventHandler = EventEmitter.EventHandler = function(handler, runs, parent){
                     this.handler = handler
                     this.runs = runs || Infinity
@@ -182,8 +182,8 @@
                 }
             return EventEmitter
         }())
-      
-      
+
+
       , Module = Sleipnir.Module = (function($){
             var inherit = function(scope, heritage){
                     for ( var i=0, l=heritage.length; i<l; i++ )
@@ -192,7 +192,7 @@
                       else
                         heritage[i].call(scope)
                 }
-              , DNA = function(self, heritage){
+              , DNA = function(scope, self, heritage){
                     var mixins = []
                     for ( var i=0, l=heritage.length; i<l; i++ )
                       if ( $.is.array(heritage[i]) )
@@ -200,11 +200,12 @@
                       else
                         mixins.push((heritage[i].prototype || {}))
                     mixins.push(self || {})
-                    return $.mix.apply(null, mixins)
+                    scope.prototype = $.mix.apply(null, mixins)
                 }
             return function(){
-                var heritage = $.args.unshift(arguments, EventEmitter) //all object are instance of EventEmitter
+                var heritage = $.args.unshift(arguments, EventEmitter) //all objects are instance of EventEmitter
                   , Egg = function(){
+                        EventEmitter.call(this)
                         inherit(this, heritage)
                         if ( !arguments.length )
                           self._construct()
@@ -216,7 +217,8 @@
                           self._construct.apply(this, arguments)
                     }
                   , self = heritage.pop().call(Egg, $)
-                  , EggProto = Egg.prototype = DNA(self, heritage)
+                  , EggProto = Egg.prototype = new EventEmitter
+                DNA(Egg, self, heritage)
                 return Egg
             }
         }($))

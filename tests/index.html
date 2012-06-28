@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title></title>
+
+<script src="../g23.sleipnir.js"></script>
+
+<div>
+  
+  
+  <script>
+    var Bar = new Sleipnir.Module(function($){
+        return {
+            _construct : function(){
+                
+            }
+        }
+    })
+    console.dir(Bar)
+  </script>
+  
+ <!-- <script>
+    
+      var Being = new Sleipnir.Module(function($){
+          return {
+              _construct : function(){}
+            , canDie : true
+            , die : function(){
+                  if ( this.canDie )
+                    this.alive = false
+              }
+          }
+      })
+      
+      var Mammal = new Sleipnir.Module(Being, function($){
+          return {
+              _construct : function(){}
+            , eyes : 2
+            , limbs : 4
+          }
+      })
+      
+
+      var Supernatural = new Sleipnir.Module(function($){
+          return {
+              _construct : function(){}
+            , supernatural : true
+          }
+      })
+      
+      var Human = new Sleipnir.Module(Mammal, function($){
+          return {
+            _construct : function(firstname, lastname){
+                  this.firstname = firstname
+                  this.lastname = lastname
+              }
+          }
+      })
+      
+      var Zombie = new Sleipnir.Module([Human, 'john', 'zombie'], Supernatural, function($){
+          return {
+              _construct : function(){
+                  this.alive = false
+              }
+            , canDie : false
+            , die : function(){
+                  alert('What is dead may never die!')
+              }
+          }
+      })
+      
+      var man = new Human('john', 'Smith')
+      var zombie = new Zombie
+      
+      console.dir(man)
+      console.dir(zombie)
+  </script> -->
+</div>
