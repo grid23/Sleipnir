@@ -30,7 +30,9 @@
                       , "function" : function(o){
                             return typeof o == "function"
                         }
-                      , "HTMLElement" : function(){}
+                      , "element" : function(o){
+                            return (o instanceof HTMLElement)
+                        }
                       , "null" : function(o){
                             return o === null
                         }
@@ -68,23 +70,61 @@
 
               , mix : function mix(){
                     var o
-                    if ( $.is.array(arguments[0]) )
+                    if ( is.array(arguments[0]) )
                       o = []
-                    else if ( $.is.object(arguments[0]) )
+                    else if ( is.object(arguments[0]) )
                       o = {}
                     else
                       throw new Error('bad argument type')
 
-                    for (var i=0, len=arguments.length; i<len; i++)  if ( (arguments[i]).constructor === (o).constructor  )
+                    for (var i=0, l=arguments.length; i<l; i++)  if ( (arguments[i]).constructor === (o).constructor  )
                       (function(t){
-                          for ( var p in t ) if ( t.hasOwnProperty(p) )
-                            if ( $.is.object(t[p]) || $.is.array(t[p]) )
+                          for ( var p in t ) if ( t.hasOwnProperty(p) ) {
+                            if ( is.object(t[p]) || is.array(t[p]) )
                               o[p] = mix(t[p])
                             else
                               o[p] = t[p]
+                            }
                       }(arguments[i]))
+                    console.dir(o)
                     return o
                 }
+                
+              , addEventListener : (function(){
+                    if ( root.addEventListener )
+                      return function(el, ev, fn, c){
+                          return el.addEventListener(ev, fn, !!c)
+                      }
+                    return function(el, ev, fn){
+                          return el.attachEvent('on'+ev, function(e){
+                              var e = e || root.event
+                              e.target = e.srcElement
+                              e.relatedTarget = e.boundElement
+                              e.isImmediatePropagationStopped = e.isImmediatePropagationStopped || false
+                              e.preventDefault = e.preventDefault || function(){
+                                  e.returnValue = false
+                              }
+                              e.stopPropagation = e.stopPropagation || function(){
+                                  e.cancelBubble = true
+                              }
+                              e.stopImmediatePropagation = e.stopImmediatePropagation || function(){
+                                e.stopPropagation()
+                                e.isImmediatePropagationStopped = true
+                              }
+                              if ( !e.isImmediatePropagationStopped )
+                                fn(e)
+                          })
+                    }
+                }())
+              , removeEventListener : (function(){
+                    if ( root.removeEventListener )
+                      return function(object, listener, fn, capture){
+                          return object.removeEventListener(listener, fn)
+                      }
+                    return function(){
+                        return object.detachEvent('on'+listener, fn)
+                    }
+                }())
             }
         }())
 
@@ -192,15 +232,15 @@
                       else
                         heritage[i].call(scope)
                 }
-              , DNA = function(scope, self, heritage){
-                    var mixins = [scope.prototype]
+              , DNA = function(ee, self, heritage){
+                    var mixins = [ee.prototype]
                     for ( var i=0, l=heritage.length; i<l; i++ )
                       if ( $.is.array(heritage[i]) )
                         mixins.push((heritage[i][0].prototype || {}))
                       else
                         mixins.push((heritage[i].prototype || {}))
                     mixins.push(self || {})
-                    scope.prototype = $.mix.apply(null, mixins)
+                    return $.mix.apply(null, mixins)
                 }
             return function(){
                 var heritage = $.args.toArray(arguments) //all objects are instance of EventEmitter
@@ -217,8 +257,8 @@
                           self._construct.apply(this, arguments)
                     }
                   , self = heritage.pop().call(Egg, $)
-                  , EggProto = Egg.prototype = new EventEmitter
-                DNA(Egg, self, heritage)
+                  , EggProto = Egg.prototype = DNA(EventEmitter, self, heritage)
+
                 return Egg
             }
         }($))

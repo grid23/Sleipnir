@@ -4,18 +4,84 @@
 
 <script src="../g23.sleipnir.js"></script>
 
+<style>
+    *{margin:0;padding:0;}
+    html, body{height:100%;}
+    #content{margin:0 auto;width:960px;}
+    #overme{margin:100px;display:inline-block;}
+    #overme span{padding:10px;background:black;color:white;}
+    .sampleTooltip-wrapper{position:absolute;z-index:9998;}
+    .sampleTooltip-content{position:relative;padding:10px;border:1px solid #303030;background:#fff;}
+</style>
+
 <div>
   
+  <div id="content">
+      <div id="overme">
+          <span data-tooltip="Lorem Ipsum solor amet.">mouse over me :)</span>
+      </div>
+  </div>
   
   <script>
-    var Bar = new Sleipnir.Module(function($){
+    var SampleTooltip = new Sleipnir.Module(function($){
+        function getNorthPoint(node){
+            var CR = node.getBoundingClientRect()
+            return {
+                  x : CR.left + pageXOffset + CR.width/2 |0
+                , y : CR.top + pageYOffset |0
+            }
+        }
         return {
-            _construct : function(){
+            _construct : function(node, content){
+                if ( !$.is.element(node) || !$.is.string(content) )
+                  throw new Error()
+                var self = this
+                this.targetNode = node
+                this.domFragment = document.createDocumentFragment()
+                this.wrapperNode = document.createElement('div')
+                this.wrapperNode.className = "sampleTooltip-wrapper"
+                this.contentNode = document.createElement('div')
+                this.contentNode.className = "sampleTooltip-content"
+                this.domFragment.appendChild(this.wrapperNode)
+                this.wrapperNode.appendChild(this.contentNode)
+                this.contentNode.innerHTML = content
+                this.status = 0
                 
+                $.addEventListener(this.targetNode, 'mousemove', function(){ self.show() })
+                $.addEventListener(this.targetNode, 'mouseout', function(){ self.hide() })
+            }
+          , show : function(){
+                if ( this.status ) return
+                this.status = 1
+                var position = getNorthPoint(this.targetNode)
+                  , w, h
+                this.wrapperNode.style.top = (position.y-10) +'px'
+                this.wrapperNode.style.left = position.x + 'px'
+                document.body.insertBefore(this.wrapperNode, document.body.childNodes[0])
+                w = this.contentNode.clientWidth
+                  , h = this.contentNode.clientHeight
+                this.contentNode.style.marginLeft = '-'+(w/2)+'px'
+                this.contentNode.style.marginTop = '-'+h+'px'
+                this.emit('show')
+            }
+          , hide : function(){
+                if ( !this.status ) return
+                this.status = 0
+                this.domFragment.appendChild(this.wrapperNode)
+                this.emit('hide')
             }
         }
     })
-    console.dir(Bar)
+    
+    var ourTooltip = document.querySelector('#overme span')
+    var tt = new SampleTooltip(ourTooltip, ourTooltip.dataset.tooltip)
+    tt
+    .on('show', function(){
+        document.body.style.background = "steelblue"
+    })
+    .on('hide', function(){
+        document.body.style.background = "white"
+    })
   </script>
   
  <!-- <script>
