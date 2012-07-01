@@ -86,10 +86,9 @@
                               o[p] = t[p]
                             }
                       }(arguments[i]))
-                    console.dir(o)
                     return o
                 }
-                
+
               , addEventListener : (function(){
                     if ( root.addEventListener )
                       return function(el, ev, fn, c){
@@ -262,4 +261,56 @@
                 return Egg
             }
         }($))
+    
+    , Module2 = Sleipnir.Module2 = (function($){
+          var moduleList = (function(){
+                  return new Map
+              }())
+            , Module = function(){
+                  var heritage = $.args.toArray(arguments)
+                    , self = heritage.pop()($)
+                    , supers = []
+                    , protos = []
+                    , Heir = function(){
+                          for ( var i=0, _args, _super, l=supers.length; i<l; i++ ) if ( supers[i][0].prototype._construct ) {
+                            _args = supers[i].slice(1)
+                            _super = supers[i][0].prototype._construct
+                            if ( _super ) {
+                              if ( _args.length == 0 )
+                                supers[i][0].prototype._construct.call(this)
+                              else if ( _args.length == 1 )
+                                supers[i][0].prototype._construct.call(this, _args[0])
+                              else if ( _args.length == 2 )
+                                supers[i][0].prototype._construct.call(this, _args[0], _args[1])
+                              else
+                                supers[i][0].prototype._construct.apply(this, _args )
+                            }
+                          }
+                          if ( this._construct ) {
+                            if ( !arguments.length )
+                              this._construct()
+                            else if ( arguments.length == 1)
+                              this._construct.call(this, arguments[0])
+                            else if ( arguments.length == 2)
+                              this._construct.call(this, arguments[0], arguments[1])
+                            else
+                              this._construct.apply(this, arguments)
+                          }
+                      }
+                  for ( var i=0, _anc, _proto, l=heritage.length; i<l; i++ ) {
+                      _anc = heritage[i]
+                      if ( $.is.array(_anc) ) {
+                        supers.push(_anc)
+                        _proto = _anc[0].prototype
+                      }
+                      else
+                        _proto = _anc.prototype
+                      protos.push(_proto)
+                  }
+                  protos.push(self)
+                  Heir.prototype = $.mix.apply(null, protos)
+                  return Heir
+              }
+          return Module
+      }($))
 }(this))
