@@ -225,7 +225,7 @@
     , Module = Sleipnir.Module = (function($){
           var Module = function(){
                   var heritage = $.args.toArray(arguments)
-                    , self = heritage.pop()($)
+                    , self = heritage.pop()
                     , supers = []
                     , protos = []
                     , Heir = function(){
@@ -264,7 +264,7 @@
                         _proto = _anc.prototype
                       protos.push(_proto)
                   }
-                  protos.push(self)
+                  protos.push(self.call(Heir, $))
                   Heir.prototype = $.mix.apply(null, protos)
                   return Heir
               }
