@@ -2,7 +2,7 @@
 
 ## dirty demo
 
-    // we create a MyModule Class, which inherits from the SleipnirJS internal EventEmitter Class
+    // we create a MyModule Class
     var MyModule = new Sleipnir.Module(function($){
     
         this.publicStaticProperty = "public static property"
@@ -21,8 +21,8 @@
     });
     
     
-    // we create a MyModuleBis Class, which inherits from our MyModule Class and the internal EventEmitter Class
-    var MyModuleBis = new Sleipnir.Module(MyModule, function($){
+    // we create a MyModuleBis Class, which inherits from our MyModule Class
+    var MyModuleBis = new Sleipnir.Module(MyModule, function(){
         return {
             _construct : function(){}
           , myPublicPropertyB : "not b"
@@ -30,8 +30,16 @@
         }
     })
     
+    // MyModuleTer will call the MyModule _construct with arguments 1,2,3 
+    var MyModuleTer = new Sleipnir.Module([MyModule, 1,2,3], function(){
+        return {
+                _construct : function(){}
+        }
+    })
+    
     var mymodule = new MyModule // logs "private static property"
-    var mymodulebis = new MyModuleBis // logs "private static property"
+    var mymodulebis = new MyModuleBis
+    var mymodyleter = new MyModuleTer //logs "private static property"
     
     mymodule.myPublicPropertyB // b
     mymodule.myPublicPropertyC // undefined

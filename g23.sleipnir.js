@@ -221,52 +221,9 @@
                 }
             return EventEmitter
         }())
-
-
-      , Module = Sleipnir.Module = (function($){
-            var inherit = function(scope, heritage){
-                    for ( var i=0, l=heritage.length; i<l; i++ )
-                      if ( $.is.array(heritage[i]) )
-                        heritage[i][0].apply(scope, heritage[i].slice(1))
-                      else
-                        heritage[i].call(scope)
-                }
-              , DNA = function(ee, self, heritage){
-                    var mixins = [ee.prototype]
-                    for ( var i=0, l=heritage.length; i<l; i++ )
-                      if ( $.is.array(heritage[i]) )
-                        mixins.push((heritage[i][0].prototype || {}))
-                      else
-                        mixins.push((heritage[i].prototype || {}))
-                    mixins.push(self || {})
-                    return $.mix.apply(null, mixins)
-                }
-            return function(){
-                var heritage = $.args.toArray(arguments) //all objects are instance of EventEmitter
-                  , Egg = function(){
-                        EventEmitter.call(this)
-                        inherit(this, heritage)
-                        if ( !arguments.length )
-                          self._construct()
-                        else if ( arguments.length == 1)
-                          self._construct.call(this, arguments[0])
-                        else if ( arguments.length == 2)
-                          self._construct.call(this, arguments[0], arguments[1])
-                        else
-                          self._construct.apply(this, arguments)
-                    }
-                  , self = heritage.pop().call(Egg, $)
-                  , EggProto = Egg.prototype = DNA(EventEmitter, self, heritage)
-
-                return Egg
-            }
-        }($))
     
-    , Module2 = Sleipnir.Module2 = (function($){
-          var moduleList = (function(){
-                  return new Map
-              }())
-            , Module = function(){
+    , Module = Sleipnir.Module = (function($){
+          var Module = function(){
                   var heritage = $.args.toArray(arguments)
                     , self = heritage.pop()($)
                     , supers = []
