@@ -270,4 +270,111 @@
               }
           return Module
       }($))
+      
+    , Module2 = Sleipnir.Module2 = (function($){
+        var moduleList = (function(){
+              return new Map
+            }())
+          , Module = function(){
+                var heritage = $.args.toArray(arguments)
+                  , self = heritage.pop()
+                  , supers = []
+                  , protos = []
+                  , Heir = function(){
+                        for ( var i=0, _args, _super, l=supers.length; i<l; i++ ) if ( supers[i][0].prototype._construct ) {
+                          _args = supers[i].slice(1)
+                          _super = supers[i][0].prototype._construct
+                          if ( _super ) {
+                            if ( _args.length == 0 )
+                              supers[i][0].prototype._construct.call(this)
+                            else if ( _args.length == 1 )
+                              supers[i][0].prototype._construct.call(this, _args[0])
+                            else if ( _args.length == 2 )
+                              supers[i][0].prototype._construct.call(this, _args[0], _args[1])
+                            else
+                              supers[i][0].prototype._construct.apply(this, _args )
+                          }
+                        }
+                        if ( this._construct ) {
+                          if ( !arguments.length )
+                            this._construct()
+                          else if ( arguments.length == 1)
+                            this._construct.call(this, arguments[0])
+                          else if ( arguments.length == 2)
+                            this._construct.call(this, arguments[0], arguments[1])
+                          else
+                            this._construct.apply(this, arguments)
+                        }
+                    }
+                for ( var i=0, l=heritage.length; i<l; i++ )
+                    (function inherit(anc){
+                        var anc = $.is.array( anc ) && ( supers.push(anc[0]), anc[0] ) || anc
+                          , ancList = moduleList.get(anc)
+                        if ( ancList )
+                          for ( var i=0, l=ancList.length; i<l; i++ )
+                            if ( moduleList.get(ancList[i]) ) inherit(ancList[i])
+                            else {
+                              if ( protos.indexOf( ancList[i] ) <0 )
+                                protos.push( ancList[i] )
+                            }
+                    }(heritage[i]))
+                moduleList.set(Heir, protos)
+                protos.push(self.call(Heir, $))
+                Heir.prototype = $.mix.apply(null, protos)
+                return Heir
+            }
+        return Module
+    }($))
 }(this))
+
+/*
+
+var A = new Sleipnir.Module2(function(){
+    return {
+          _construct: function(){
+
+          },
+          a : "a"
+    }
+})
+
+var B = new Sleipnir.Module2(function(){
+    return {
+        _construct: function(){
+
+        },
+        b: "b"
+    }
+})
+
+var C = new Sleipnir.Module2(A, B, function(){
+    return {
+        _construct: function(){
+
+        },
+        c: "c"
+    }
+})
+
+var D = new Sleipnir.Module2(function(){
+    return {
+        _construct: function(){
+
+        },
+        d: "d"
+    }
+})
+
+var E = new Sleipnir.Module2(C, D, function(){
+    return {
+        _construct: function(){
+
+        },
+        e: "e"
+    }
+})
+
+var e = new E
+e
+
+*/
