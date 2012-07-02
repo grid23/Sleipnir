@@ -128,7 +128,7 @@
         }())
 
 
-      , EventEmitter = (function(){
+      , EventEmitter = Sleipnir.EventEmitter = (function(){
             var
                 setImmediate = (function(){
                     var queue = []
