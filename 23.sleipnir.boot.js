@@ -20,7 +20,7 @@
           w.sleipnir.apply(null, sleipnirq[i])
     }
     s.onerror = function(e){
-        throw new Error('Failed to load 55.core')
+        throw new Error('Failed to load sleipnir.core')
     }
     s.src = "23.sleipnir.core.js"
     p.parentNode.insertBefore(s, p.nextSibling)
