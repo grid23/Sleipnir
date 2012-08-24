@@ -1,53 +1,10 @@
-# SleipnirJS
+#23.sleipnir.core
 
-## dirty demo
+Sleipnir is a Javascript framework that aims to make easier for front-end developers to organize their front architecture.
 
-    // we create a MyModule Class
-    var MyModule = new Sleipnir.Module(function($){
-    
-        this.publicStaticProperty = "public static property"
-        var privateStaticProperty = "private static property"
-        
-        // $ is a helper library, example : $.args.toArray() which transforms arguments as an array
-        
-        return {
-            _construct : function(){
-                // constructor function
-                console.log( privateStaticProperty )
-            }
-          , myPublicPropertyA : "a"
-          , myPublicPropertyB : "b"
-        }
-    });
-    
-    
-    // we create a MyModuleBis Class, which inherits from our MyModule Class
-    var MyModuleBis = new Sleipnir.Module(MyModule, function(){
-        return {
-            _construct : function(){}
-          , myPublicPropertyB : "not b"
-          , myPublicPropertyC : "c"
-        }
-    })
-    
-    // MyModuleTer will call the MyModule _construct with arguments 1,2,3 
-    var MyModuleTer = new Sleipnir.Module([MyModule, 1,2,3], function(){
-        return {
-                _construct : function(){}
-        }
-    })
-    
-    var mymodule = new MyModule // logs "private static property"
-    var mymodulebis = new MyModuleBis
-    var mymodyleter = new MyModuleTer //logs "private static property"
-    
-    mymodule.myPublicPropertyB // b
-    mymodule.myPublicPropertyC // undefined
-    
-    mymodulebis.myPublicPropertyA // a
-    mymodulebis.myPublicPropertyB // not b
-    mymodulebis.myPublicPropertyC // c
-    
-    MyModule.publicStaticProperty // public static property
-    mymodule.publicStaticProperty // undefined
-    MyModuleBis.publicStaticProperty // undefined
+While still in its beginning and under heavy development, the milestone 0.1.0 should be ready enough to start being used on a small scale or prototype site for testing.
+
+Sleipnir has a big orientation towards Class based code.
+
+
+*( code example and a small doc coming soon... )*
