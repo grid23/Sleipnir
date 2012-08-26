@@ -161,9 +161,27 @@ sleipnir({type:"css", value:"<style>body{background:black;}</style>", sibling:ta
 });
 ```
 
+One very important rule is that all resources are uniques.
+The following example will only result in one jQuery file being loaded, one http request, and the three calls use to the same Promise based sleipnir.data.Script instance that is used for that file.
+Note that filea.js is not the same as filea.js?v=2
+```javascript
+sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw new Error('Houston, we have a problem.'); }
+	console.log('fire whenever jquery is loaded');
+});
+
+sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw new Error('Houston, we have a problem.'); }
+	console.log('fire whenever jquery is loaded');
+	
+	sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw new Error('Houston, we have a problem.'); }
+		console.log('fire whenever jquery is loaded');
+	});
+});
+
+```
+
 **Notes :**
 - In modern browsers, if you pass an inline striing of code, it will be transformed as a blob file, which is awesome and is easier to manipulate (events).
-- There is no way right now to get your created nodes in the sleipnir invoked callback, but it's planned in the future (a way to do that right now is to use sleipnir.data.{CSS,Script}).
+- There is no way right now to get your created nodes in the sleipnir invoked callback, but it's planned in the future (a way to do that for the moment is to use sleipnir.data.{CSS,Script}).
 - loading of images is not very well supported right now, but can still be used as a preloading thing.
 
 
@@ -172,27 +190,39 @@ sleipnir({type:"css", value:"<style>body{background:black;}</style>", sibling:ta
 *(coming soon)*
 
 **sleipnir.core.Klass**
+
 **sleipnir.core.EventEmitter**
+
 **sleipnir.core.EventChanneler**
+
 **sleipnir.core.Promise**
+
 **sleipnir.core.Deferrer**
+
 **sleipnir.core.VariableSet**
+
 
 ## sleipnir.data
 
 *(coming soon)*
 
 **sleipnir.data.Script**
+
 **sleipnir.data.CSS**
+
 **sleipnir.data.IMG**
+
 
 ## sleipnir.env
 
 *(coming soon, and not implemented right now!)*
 
 **sleipnir.env.browser**
+
 **sleipnir.env.device**
+
 **sleipnir.env.url**
+
 **sleipnir.env.cookie**
 
 
