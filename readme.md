@@ -18,12 +18,12 @@ Sleipnir...
 ## How the start of a sleipnir-powered project might look like
 ```javascript
 sleipnir(function(){
-		var MyClassA = new sleipnir.core.Klass(sleipnir.core.EventEmitter, function(_){
+		var MyClassA = new sleipnir.core.Klass(function(_){
 			var publicStaticProperty = this.publicStaticProperty = "foo";
 			var privateStaticProperty = "bar";
 			var publicStaticMethod = this.publicStaticMethod = function(){};
 			var privateStaticMethod = function(){};
-			
+
 			return {
 				_construct: function(){},
 				methodA: function(){},
@@ -31,9 +31,10 @@ sleipnir(function(){
 			}
 		});
 
-		var MyClassB = new Sleipnir.core.Klass(MyClassA, function(){
+		var MyClassB = new Sleipnir.core.Klass(MyClassA, function(_){
 			return {
 				_construct: function(){
+					var args = _.to.array(arguments)
 					console.log(this.propertyA + this.propertyB)
 				},
 				methodB: function(){},
@@ -51,6 +52,8 @@ sleipnir(function(){
 ## An equivalent code in vanillaJS, in a perfect world where every browsers work the same
 ```javascript
 (function(){
+		var slice = Array.prototype.slice
+		
 		var MyClassA = (function(){
 			var MyClassA = function(){}
 
@@ -58,16 +61,17 @@ sleipnir(function(){
 			var privateStaticProperty = "bar";
 			var publicStaticMethod = MyClassA.publicStaticMethod = function(){};
 			var privateStaticMethod = function(){};
-			
+
 			MyClassA.prototype = {
 				methodA: function(){},
 				propertyA: "foo"
 			};
-		
+
 			return MyClassA;
 		}());
 
 		var MyClassB = function(){
+			var args = slice.call(arguments)
 			console.log(this.propertyA + this.propertyB);
 		};
 		MyClassB.prototype = new MyClassA;
@@ -79,7 +83,7 @@ sleipnir(function(){
 			var a = new MyClassA;
 			var b = new MyClassB;
 		});
-		
+
 		if ( document.readyState === "complete" ) {
 			onstart();
 		} else {
