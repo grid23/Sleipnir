@@ -95,6 +95,40 @@ sleipnir(function(){
 }());
 ```
 
+## the sleipnir function
+
+The sleipnir wrapper function takes another function as an argument. That function will be executed in those conditions :
+- as soon as the DOM is ready ( DOMContentLoaded, with fallback on onload ) 
+- if sleipnir is loaded async'ly from the 23.sleipnir.boot.js and DOMContentLoaded has already been fired, as soon as possible
+- the wrapper takes an optional last boolean argument, if set at false, as soon as possible (eg., do not wait for DOMContentLoaded)
+- if dependencies are requested, as soon as all dependencies are loaded, with DOMContentLoaded being waited for in the same fashion as previously stated
+
+The passed function will be invoked with two arguments :
+- error : if an error has occured while loading dependencies, you will know
+- _ : helpers library
+
+```javascript
+sleipnir(function(err, _){
+	console.log('fire at DOMContentLoader');
+});
+```
+```javascript
+sleipnir(function(err, _){
+	console.log('fire ASAP');
+}, false);
+```
+```javascript
+sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw new Error('Houston, we have a problem.') }
+	console.log('fire whenever jquery is loaded, or DOMContentLoaded is fired, whichever happens last');
+});
+```
+```javascript
+sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw new Error('Houston, we have a problem.') }
+	console.log('fire whenever jquery is loaded');
+},false);
+```
+
+
 
 
 ## LICENSE
