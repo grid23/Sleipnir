@@ -161,9 +161,12 @@ sleipnir({type:"css", value:"<style>body{background:black;}</style>", sibling:ta
 });
 ```
 
-One very important rule is that all resources are uniques.
-The following example will only result in one jQuery file being loaded, one http request, and the three calls use to the same Promise based sleipnir.data.Script instance that is used for that file.
+One very important rule is that all resources are unique.
+
+The following example will only result in one jQuery file being loaded, one http request, as the three calls use to the same Promise based sleipnir.data.Script instance.
+
 Note that filea.js is not the same as filea.js?v=2
+
 ```javascript
 sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw new Error('Houston, we have a problem.'); }
 	console.log('fire whenever jquery is loaded');
@@ -173,15 +176,15 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 	console.log('fire whenever jquery is loaded');
 	
 	sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw new Error('Houston, we have a problem.'); }
-		console.log('fire whenever jquery is loaded');
+		console.log('jquery has been loaded long ago, no delay');
 	});
 });
 
 ```
 
 **Notes :**
-- In modern browsers, if you pass an inline striing of code, it will be transformed as a blob file, which is awesome and is easier to manipulate (events).
-- There is no way right now to get your created nodes in the sleipnir invoked callback, but it's planned in the future (a way to do that for the moment is to use sleipnir.data.{CSS,Script}).
+- In modern browsers, if you pass an inline tag, it will be transformed as a blob file, which is awesome and is easier to manipulate (events for onload, onerror).
+- There is no way right now to get references of your created nodes in the sleipnir invoked callback, but it's planned in the future (a way to do that for the moment is to use sleipnir.data.{CSS,Script}).
 - loading of images is not very well supported right now, but can still be used as a preloading thing.
 
 
