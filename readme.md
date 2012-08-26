@@ -52,7 +52,7 @@ sleipnir(function(){
 ## An equivalent code in vanillaJS, in a perfect world where every browsers work the same
 ```javascript
 (function(){
-		var slice = Array.prototype.slice
+		var slice = Array.prototype.slice;
 		
 		var MyClassA = (function(){
 			var MyClassA = function(){}
