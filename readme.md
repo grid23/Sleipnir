@@ -1,9 +1,6 @@
 #23.sleipnir
-<<<<<<< HEAD
-( current version : v0.1.0 )
-=======
 ( current version : v0.1.1 )
->>>>>>> v0.1.1
+
 
 Sleipnir is a Javascript framework that aims to make easier for developers to organize their front-end website architecture.
 
@@ -60,11 +57,6 @@ sleipnir(function(){
 ```javascript
 (function(){
 		var slice = Array.prototype.slice;
-<<<<<<< HEAD
-		
-=======
-
->>>>>>> v0.1.1
 		var MyClassA = (function(){
 			var MyClassA = function(){}
 
@@ -120,11 +112,7 @@ DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
 TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION 
 
 0. You just DO WHAT THE FUCK YOU WANT TO.
-<<<<<<< HEAD
- 
-=======
 
->>>>>>> v0.1.1
  This program is free software. It comes without any warranty, to
  the extent permitted by applicable law. You can redistribute it
  and/or modify it under the terms of the Do What The Fuck You Want
