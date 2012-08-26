@@ -9,7 +9,7 @@ While still in its early youth and under heavy development, the milestone 0.1.0 
 Sleipnir...
 - has a strong orientation towards Class based code.
 - is 100% event based (everything implements a base EventEmitter class)
-- thinks we should load everythings in an async fashion
+- thinks we should load everything in an async fashion
 - doesn't try to change the way JavaScript feels & looks
 
 
