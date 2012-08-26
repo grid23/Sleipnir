@@ -134,6 +134,66 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 },false);
 ```
 
+You can load as many dependencies as needed, of many kinds, examples :
+```javascript
+sleipnir('fileA.js', function(err){ if ( err ) throw new Error;
+	console.log("a single js file");
+})
+
+sleipnir('fileA.js', "fileB.css", function(err){ if ( err ) throw new Error;
+	console.log("two external files, one js, one css");
+});
+
+sleipnir("<scr"+"ipt>window.x = \"x\"</scr"+"ipt>", function(err){ if ( err ) throw new Error;
+	console.log("inline script file, ugly, but hey");
+});
+
+sleipnir("<style>body{background:black;}</style>", function(err){ if ( err ) throw new Error;
+	console.log("inline css file");
+});
+```
+
+By default, the files are placed after the last element of the same type in the webpage, but you can override that
+```javascript
+var targetNode = document.getElementByTagName('style')[0]
+sleipnir({type:"css", value:"<style>body{background:black;}</style>", sibling:targetNode, position:"before"}, function(err){ if ( err ) throw new Error;
+	console.log("inline css file");
+});
+```
+
+**Notes :**
+- In modern browsers, if you pass an inline striing of code, it will be transformed as a blob file, which is awesome and is easier to manipulate (events).
+- There is no way right now to get your created nodes in the sleipnir invoked callback, but it's planned in the future (a way to do that right now is to use sleipnir.data.{CSS,Script}).
+- loading of images is not very well supported right now, but can still be used as a preloading thing.
+
+
+## sleipnir.core
+
+*(coming soon)*
+
+**sleipnir.core.Klass**
+**sleipnir.core.EventEmitter**
+**sleipnir.core.EventChanneler**
+**sleipnir.core.Promise**
+**sleipnir.core.Deferrer**
+**sleipnir.core.VariableSet**
+
+## sleipnir.data
+
+*(coming soon)*
+
+**sleipnir.data.Script**
+**sleipnir.data.CSS**
+**sleipnir.data.IMG**
+
+## sleipnir.env
+
+*(coming soon, and not implemented right now!)*
+
+**sleipnir.env.browser**
+**sleipnir.env.device**
+**sleipnir.env.url**
+**sleipnir.env.cookie**
 
 
 
@@ -166,7 +226,6 @@ DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
 TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION 
 
 0. You just DO WHAT THE FUCK YOU WANT TO.
-
 
 This program is free software. It comes without any warranty, to
 the extent permitted by applicable law. You can redistribute it
