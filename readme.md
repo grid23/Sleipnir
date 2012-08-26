@@ -202,6 +202,8 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 **sleipnir.core.Deferrer**
 
+**sleipnir.core.ResourceLoader**
+
 **sleipnir.core.VariableSet**
 
 
