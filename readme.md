@@ -1,10 +1,15 @@
 #23.sleipnir.core
 
-Sleipnir is a Javascript framework that aims to make easier for front-end developers to organize their front architecture.
+Sleipnir is a Javascript framework that aims to make easier for developers to organize their front-end website architecture.
 
-While still in its beginning and under heavy development, the milestone 0.1.0 should be ready enough to start being used on a small scale or prototype site for testing.
+While still in its early youth and under heavy development, the milestone 0.1.0 should be ready enough to power a prototype site for testing.
 
-Sleipnir has a big orientation towards Class based code.
+
+## some key concepts
+Sleipnir...
+- has a strong orientation towards Class based code.
+- is 100% event based (everything implements a base EventEmitter class)
+- doesn't try to change the way JavaScript feels & looks
 
 
 *( more code example and a small doc coming soon... )*
