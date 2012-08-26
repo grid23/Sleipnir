@@ -43,7 +43,7 @@ sleipnir(function(){
 }, false);
 ```
 
-## An equivalent code in vanillaJS, in a perfect world where every browser works the same
+## An equivalent code in vanillaJS, in a perfect world where every browsers work the same
 ```javascript
 (function(){
 		var MyClassA = (function(){
@@ -66,7 +66,7 @@ sleipnir(function(){
 		};
 		MyClassB.prototype = new MyClassA;
 		MyClassB.prototype.constructor = MyClassB;
-		MyClassB.prototyoe.methodB = function(){};
+		MyClassB.prototype.methodB = function(){};
 		MyClassB.prototype.propertyB = "bar";
 		
 		window.addEventListener('DOMContentLoaded', function(){
