@@ -83,7 +83,7 @@ sleipnir(function(){
 		if ( document.readyState === "complete" ) {
 			onstart();
 		} else {
-			window.addEventListener('DOMContentLoaded', onstart)
+			window.addEventListener('DOMContentLoaded', onstart);
 		}
 }());
 ```
