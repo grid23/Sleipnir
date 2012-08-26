@@ -19,6 +19,8 @@
       , env = ns.env = {}
       , data = ns.data = {}
 
+      , version = ns.version = "0.1.1a01"
+
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
               , toString = Object.prototype.toString
@@ -395,13 +397,15 @@
                     return this
                 }
               , or: function(onrejectHandler){
+                    if ( !onrejectHandler)  return this
                     if ( this.status === 0 )
                       return onrejectHandler(), this
-                    if ( onrejectHandler) this.once('deferrer.rejected', onrejectHandler)
+                    this.once('deferrer.rejected', onrejectHandler)
                     return this
                 }
               , progress: function(onprogressHandler){
-                    if ( onprogressHandler) this.once('deferrer.progress', onprogressHandler)
+                    if ( !onprogressHandler ) return this 
+                    this.once('deferrer.progress', onprogressHandler)
                     return this
                 }
               , resolve: function(){
@@ -420,7 +424,7 @@
                     if ( percent != 100 )
                       this.emit('deferrer.progress', percent )
                     else
-                      if ( !this.promises.unresolvable.length )
+                      if ( !this.promises.unresolvable )
                         this.resolve()
                       else
                         this.reject()
@@ -898,9 +902,15 @@
 
       , deviceMask = env.device = new Klass(VariableSet, function(){
 
+            var retina = ( root.devicePixelRatio || 1 ) >= 1.5
+
+
             return {
                 _construct: function(){
                     VariableSet.call(this)
+
+                    this.set('retina', retina)
+                    this.set('hidpi', retina)
                 }
             }
         }, true)
@@ -927,10 +937,19 @@
 
             return {
                 _construct: function(){
-
+                    VariableSet.call(this)
                 }
             }
         }, true)
+
+      , bus = env.eventBus = new Klass(EventChanneler, function(_){
+
+          return {
+              _construct: function(){
+                  EventChanneler.call(this)
+              }
+          }
+      })
 
       , domReadyListener = new Klass(EventEmitter, function(){ //singleton
             return {
@@ -999,13 +1018,15 @@
                     if ( dependencies.length )
                       return new ResourceLoader(dependencies).then(function(){
                           sleipnir(handler, wait)
+                      }).or(function(){
+                          handler(new Error('sleipnir: error loading one of the requested resources'), _)
                       }), ns
 
                     if ( domReady || !wait )
-                      return handler(_), ns
+                      return handler(null, _), ns
 
                     return domReadyListener.on('domready', function(){
-                        handler(_)
+                        handler(null, _)
                     }), ns
                 }
 
@@ -1016,3 +1037,8 @@
         }(_))
 }(this))
 ;
+
+
+/*
+
+*/
