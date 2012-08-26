@@ -82,7 +82,7 @@ sleipnir(function(){
 		var onstart = function(){
 			var a = new MyClassA;
 			var b = new MyClassB;
-		});
+		};
 
 		if ( document.readyState === "complete" ) {
 			onstart();
