@@ -199,39 +199,43 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 **sleipnir.core.EventEmitter**
 
-**sleipnir.core.EventChanneler**
+**sleipnir.core.EventChanneler** implements sleipnir.core.EventEmitter
 
-**sleipnir.core.Promise**
+**sleipnir.core.Promise** implements sleipnir.core.EventEmitter
 
-**sleipnir.core.Deferrer**
+**sleipnir.core.Deferrer** implements sleipnir.core.EventEmitter
 
-**sleipnir.core.ResourceLoader**
+**sleipnir.core.ResourceLoader** implements sleipnir.core.Deferrer
 
-**sleipnir.core.VariableSet**
+**sleipnir.core.ConditionSet** implements sleipnir.core.Deferrer
+
+**sleipnir.core.VariableSet** implements sleipnir.core.EventEmitter
 
 
 ## sleipnir.data
 
 *(coming soon)*
 
-**sleipnir.data.Script**
+**sleipnir.data.Usher** implements sleipnir.core.Promise
 
-**sleipnir.data.CSS**
+**sleipnir.data.Script** implements sleipnir.core.Promise
 
-**sleipnir.data.IMG**
+**sleipnir.data.CSS** implements sleipnir.core.Promise
+
+**sleipnir.data.IMG** implements sleipnir.core.Promise
 
 
 ## sleipnir.env
 
 *(coming soon, and not implemented right now!)*
 
-**sleipnir.env.browser**
+**sleipnir.env.browser** implements sleipnir.core.VariableSet
 
-**sleipnir.env.device**
+**sleipnir.env.device** implements sleipnir.core.VariableSet
 
-**sleipnir.env.url**
+**sleipnir.env.url** implements sleipnir.core.VariableSet
 
-**sleipnir.env.cookie**
+**sleipnir.env.cookie** implements sleipnir.core.VariableSet
 
 
 
