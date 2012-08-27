@@ -23,7 +23,7 @@ Sleipnir...
 ## How the start of a sleipnir-powered project might look like
 ```javascript
 sleipnir(function(){
-		var MyClassA = new sleipnir.core.Klass(function(_){
+		var MyClassA = sleipnir.core.Klass(function(_){
 			var publicStaticProperty = this.publicStaticProperty = "foo";
 			var privateStaticProperty = "bar";
 			var publicStaticMethod = this.publicStaticMethod = function(){};
@@ -32,11 +32,11 @@ sleipnir(function(){
 			return {
 				_construct: function(){},
 				methodA: function(){},
-				popertyA: "foo"
+				propertyA: "foo"
 			}
 		});
 
-		var MyClassB = new Sleipnir.core.Klass(MyClassA, function(_){
+		var MyClassB = sleipnir.core.Klass(MyClassA, function(_){
 			return {
 				_construct: function(){
 					var args = _.to.array(arguments)
