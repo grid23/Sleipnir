@@ -1,5 +1,5 @@
 #23.sleipnir
-( current version : v0.1.1 )
+( current version : v0.1.2 )
 
 
 Sleipnir is a Javascript framework that aims to make easier for developers to organize their front-end website architecture.
@@ -153,12 +153,15 @@ sleipnir("<style>body{background:black;}</style>", function(err){ if ( err ) thr
 });
 ```
 
-By default, the files are placed after the last element of the same type in the webpage, but you can override that
+By default, css and script files are placed at the bottom of the head node, but it can be overrided
 ```javascript
 var targetNode = document.getElementByTagName('style')[0]
-sleipnir({type:"css", value:"<style>body{background:black;}</style>", sibling:targetNode, position:"before"}, function(err){ if ( err ) throw new Error;
+sleipnir({type:"css", value:"<style>body{background:black;}</style>", position:{selector:targetNode, type:3}}, function(err){ if ( err ) throw new Error;
 	console.log("inline css file");
 });
+
+//type corresponds to :
+// 1: "append", 2: "prepend", 3: "insertBefore", 4: "insertAfter", 5: "replaceWith"
 ```
 
 One very important rule is that all resources are unique.
