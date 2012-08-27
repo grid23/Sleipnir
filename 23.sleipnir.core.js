@@ -19,7 +19,7 @@
       , env = ns.env = {}
       , data = ns.data = {}
 
-      , version = ns.version = "0.1.1a01"
+      , version = ns.version = "0.1.2a01"
 
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
@@ -498,6 +498,54 @@
             }
         })
 
+      , Usher = data.Usher = new Klass(Promise, function(_){
+
+            var types = {
+                    1: "append"
+                  , 2: "prepend"
+                  , 3: "insertBefore"
+                  , 4: "insertAfter"
+                  , 5: "replaceWith"
+                }
+
+            return {
+                _construct: function(node, targetNode, actionType){
+                    Promise.call(this)
+                    if ( !_.is.element(node) || !_.is.element(targetNode) )
+                        this.reject()
+                    this.node = node
+                    this.targetNode = targetNode
+                    this.actionType = actionType || 1
+
+                    this[types[this.actionType]]()
+                }
+              , append: function(){
+                    this.targetNode.appendChild(this.node)
+                    this.resolve()
+                }
+              , prepend: function(){
+                    this.targetNode.insertBefore(this.node, this.targetNode.childNodes[0])
+                    this.resolve()
+                }
+              , insertBefore: function(){ 
+                    this.targetNode.parentNode.insertBefore(this.node, this.targetNode)
+                    this.resolve()
+                }
+              , insertAfter: function(){
+                    var nsibling = this.targetNode.nextSibling
+                    if ( nsibling ) // old ie could fail if node nextSibling does not exist
+                      this.targetNode.parentNode.insertBefore(this.node, nsibling)
+                    else
+                      this.targetNode.parentNode.appendChild(this.node)
+                    this.resolve()
+                }
+              , replaceWith: function(){
+                    this.targetNode.parentNode.replaceChild(this.node, this.targetNode)
+                    this.resolve()
+                }
+            }
+        })
+
       , CSS = data.CSS = new Klass(Promise, function(_){
 
             function getInlineNode(cssText, onsuccess, onerror, oldIE){
@@ -547,36 +595,29 @@
                 return node
             }
 
-            var defaults = {
-                    parameters : {
-                        sibling: null
-                      , position: "after"
-                    }
-                }
-
             return {
                 _construct: function(css, parameters, handler){ 
                     var self=this
                       , args = _.to.array(arguments)
                       , handler = _.is.fn(args[args.length-1]) && args.pop() || null
                       , css = args.shift()
-                      , parameters = _.mix(defaults.parameters, (args.length && args[0] || {}))
+                      , parameters = args.length && args[0] || {}
                       , oldIE=false
 
                     Promise.call(this)
 
                     this.node = null
-                    this._sibling = parameters.sibling
-                    this._position = parameters.position
+
                     oldIE = this._oldIE = document.createStyleSheet && true || false
 
                     setTimeout(function(){ //kind of async'ing
-                        var node, match, cssText, cssUrl, sibling, position, hasBlob=false, URL, inline=false
+                        var node, match, cssText, cssUrl, hasBlob=false, URL, inline=false
+                          , position = (parameters.position && parameters.position.selector) && parameters.position || {
+                                selector: head || document.head
+                              , type: 1 //append
+                            }
                           , onsuccess = function(){ self.resolve() }
                           , onerror = function(){ self.reject() }
-
-                        sibling = self._sibling || document.head.childNodes[document.head.childNodes.length-1]
-                        position = self._position === "after" && ( sibling.nextSibling && sibling.nextSibling || sibling ) || sibling
 
                         URL = root.URL || root.webkitURL
                         hasBlob = (root.Blob && URL.createObjectURL ) && true || false
@@ -598,10 +639,13 @@
 
                         self.node = node
 
-                        sibling.parentNode.insertBefore(node, position)
+                        new Usher(node, position.selector, position.type).then(function(){
+                           if ( inline )
+                              self.resolve()
+                        }, function(){
+                            self.reject()
+                        })
 
-                        if ( inline )
-                          self.resolve()
                     }, 0)
 
                     if ( handler )
@@ -665,36 +709,27 @@
                 return node
             }
 
-            var defaults = {
-                    parameters : {
-                        sibling: null
-                      , position: "after"
-                    }
-                }
-
             return {
                 _construct: function(script, parameters, handler){
                     var self = this
                       , args = _.to.array(arguments)
                       , handler = _.is.fn(args[args.length-1]) && args.pop() || null
                       , script = args.shift()
-                      , parameters = _.mix(defaults.parameters, args.length && args[0] || {} )
+                      , parameters = args.length && args[0] || {}
 
                     Promise.call(this)
                     this.node = null
-                    this._sibling = parameters.sibling
-                    this._position = parameters.position
 
                     setTimeout(function(){
-                        var match, node, scriptText, scriptUrl, inline=false, URL, hasBlob, sibling, position
+                        var match, node, scriptText, scriptUrl, inline=false, URL, hasBlob
                           , onsuccess = function(){ self.resolve() }
                           , onerror = function(){ self.reject() }
-
+                          , position = (parameters.position && parameters.position.selector) && parameters.position || {
+                                selector: head || document.head
+                              , type: 1 //append
+                            }
                         URL = root.URL || root.webkitURL
                         hasBlob = (root.Blob && URL.createObjectURL ) && true || false
-
-                        sibling = self._sibling || document.head.childNodes[document.head.childNodes.length-1]
-                        position = self._position === "after" && ( sibling.nextSibling && sibling.nextSibling || sibling ) || sibling
 
                         if ( match = script.match(rscript), match )
                             scriptText = match[2],
@@ -712,10 +747,12 @@
 
                         self.node = node
 
-                        sibling.parentNode.insertBefore(node, position)
-
-                        if ( inline )
-                          self.resolve()
+                        new Usher(node, position.selector, position.type).then(function(){
+                           if ( inline )
+                              self.resolve()
+                        }, function(){
+                            //self.reject()
+                        })
                     }, 0)
 
                     if ( handler )
@@ -768,12 +805,16 @@
                       , args = _.to.array(arguments)
                       , handler = _.is.fn(args[args.length-1]) && args.pop() || null
                       , image = args.shift()
-                      , parameters = _.mix( defaults.parameters, (args.length && args[0] || {}) )
+                      , parameters = args.length && args[0] || {}
 
                     setTimeout(function(){
                         var match, inline=false, hasBlob=false, URL, node
                           , onsuccess = function(){ self.resolve() }
                           , onerror = function(){ self.reject() }
+                          , position = (parameters.position && parameters.position.selector) && parameters.position || {
+                              selector: head || document.head
+                            , type: 1 //append
+                          }
 
                         URL = root.URL || root.webkitURL
                         hasBlob = (root.Blob && URL.createObjectURL ) && true || false
@@ -795,8 +836,11 @@
 
                         self.node = node
 
-                        if ( inline )
-                          self.resolve()
+                        // todo, manage how images are handled
+                        //new Usher(node, position.selection, position.type).then(function(){
+                           if ( inline )
+                              self.resolve()
+                        //})
                     }, 0)
 
                     if ( handler )
@@ -867,7 +911,7 @@
             }
 
 
-            var resourceList = new VariableSet
+            var resourceList = this.resourceList = new VariableSet
 
             return {
                 _construct: function(){
@@ -898,9 +942,94 @@
             }
         })
 
+      , ConditionSet = core.ConditionSet = new Klass(Deferrer, function(_){
 
+            var Filter = new Klass(Promise, function(_){
 
-      , deviceMask = env.device = new Klass(VariableSet, function(){
+                    var filters = {
+                             0: "customfnFilter"
+                  /*text*/ , 1: "match", 2: "contains", 3: "startswith", 4: "endswith", 5: "regexp"
+               /*numeric*/ , 6: "equal", 7: "greater", 8: "lesser", 9: "greaterOrEqual", 10: "lesserOrEqual"
+                         }
+
+                    return {
+                        _construct: function(params){
+                            Promise.call(this)
+                            if ( _.is.fn(arguments[0]) )
+                              console.log()
+                            else if ( !_.is.object(params) || !params.type || !params.pattern || !params.varaiable || !params.value )
+                              this.reject()
+
+                        }
+                      , customfn: function(){
+
+                        }
+                      , customfnFilter: function(){
+
+                        }
+                      , match: function(){
+
+                        }
+                      , contains: function(){
+
+                        }
+                      , startswith: function(){
+
+                        }
+                      , endswith: function(){
+
+                        }
+                      , regexp: function(){
+
+                        }
+                      , equal: function(){
+
+                        }
+                      , greater: function(){
+
+                        }
+                      , lesser: function(){
+
+                        }
+                      , greaterOrEqual: function(){
+
+                        }
+                      , lesserOrEqual: function(){
+
+                        }
+                    }
+                })
+
+            return {
+                _construct: function(){
+                    Deferrer.call(this)
+                    var self = this
+                      , filterList, customfn
+
+                    filterList = _.is.array(arguments[0]) && arguments[0] || _.to.array(arguments)
+
+                    for ( var i=0,l=filterList.length; i<l; i++ )
+                        (function(promise){
+                            setTimeout(function(){
+                                promise.then(function(){
+                                    self.promises.resolvable++
+                                    self.onprogress()
+                                }, function(){
+                                    self.promises.unresolvable++
+                                    self.onprogress()
+                                })
+                            }, 0)
+                        }(this.promises[i]))
+
+                        if (!arguments.length)
+                          setTimeout(function(){
+                              self.resolve()
+                          }, 0)
+                }
+            }
+        })
+
+      , deviceMask = env.device = new Klass(VariableSet, function(){ //singleton
 
             var retina = ( root.devicePixelRatio || 1 ) >= 1.5
 
@@ -915,7 +1044,7 @@
             }
         }, true)
 
-      , browserMask = env.browser = new Klass(VariableSet, function(){
+      , browserMask = env.browser = new Klass(VariableSet, function(){ //singleton
 
             return {
                 _construct: function(){
@@ -924,7 +1053,7 @@
             }
         }, true)
 
-      , urlMask = env.url = new Klass(VariableSet, function(){
+      , urlMask = env.url = new Klass(VariableSet, function(){ //singleton
 
             return {
                 _construct: function(){
@@ -933,7 +1062,7 @@
             }
         }, true)
 
-      , cookieMask = env.cookie = new Klass(VariableSet, function(){
+      , cookieMask = env.cookie = new Klass(VariableSet, function(){ //singleton
 
             return {
                 _construct: function(){
@@ -941,15 +1070,6 @@
                 }
             }
         }, true)
-
-      , bus = env.eventBus = new Klass(EventChanneler, function(_){
-
-          return {
-              _construct: function(){
-                  EventChanneler.call(this)
-              }
-          }
-      })
 
       , domReadyListener = new Klass(EventEmitter, function(){ //singleton
             return {
@@ -970,13 +1090,12 @@
                     // test to know if the document is already loaded
                     // attach listeners for document readyness otherwise and in some other cases ( ff 3.5 )
 
-                    if ( document.readyState )
-                      if ( document.readyState == 'complete' ) {
-                        onready()
-                        return // no need to go further
-                      }
-                      else if ( root.addEventListener ) // target old not-ie-browsers without document.readyState ( ff 3.5 )
-                        setTimeout(onready, 0)  // will fire after document is ready
+                    if ( document.readyState ) {
+                      if ( document.readyState == 'complete' )
+                        return onready()
+                    }
+                    else if ( root.addEventListener ) // target old not-ie-browsers without document.readyState ( ff 3.5 )
+                      setTimeout(onready, 0)  // will fire after document is ready
 
                     if ( root.addEventListener )
                         root.addEventListener('DOMContentLoaded', onready),
