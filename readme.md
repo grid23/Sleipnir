@@ -166,7 +166,7 @@ sleipnir({type:"css", value:"<style>body{background:black;}</style>", position:{
 
 One very important rule is that all resources are unique.
 
-The following example will only result in one jQuery file being loaded, one http request, as the three calls use to the same Promise based sleipnir.data.Script instance.
+The following example will only result in one jQuery file being loaded, one http request, as the three calls use to the same Promise based sleipnir.dom.Script instance.
 
 Note that filea.js is not the same as filea.js?v=2
 
@@ -187,7 +187,7 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 **Notes :**
 - In modern browsers, if you pass an inline tag, it will be transformed as a blob file, which is awesome and is easier to manipulate (events for onload, onerror).
-- There is no way right now to get references of your created nodes in the sleipnir invoked callback, but it's planned in the future (a way to do that for the moment is to use sleipnir.data.{CSS,Script}).
+- There is no way right now to get references of your created nodes in the sleipnir invoked callback, but it's planned in the future (a way to do that for the moment is to use sleipnir.dom.{CSS,Script}).
 - loading of images is not very well supported right now, but can still be used as a preloading thing.
 
 
@@ -212,17 +212,17 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 **sleipnir.core.VariableSet** implements sleipnir.core.EventEmitter
 
 
-## sleipnir.data
+## sleipnir.dom
 
 *(coming soon)*
 
-**sleipnir.data.Usher** implements sleipnir.core.Promise
+**sleipnir.dom.Usher** implements sleipnir.core.Promise
 
-**sleipnir.data.Script** implements sleipnir.core.Promise
+**sleipnir.dom.Script** implements sleipnir.core.Promise
 
-**sleipnir.data.CSS** implements sleipnir.core.Promise
+**sleipnir.dom.CSS** implements sleipnir.core.Promise
 
-**sleipnir.data.IMG** implements sleipnir.core.Promise
+**sleipnir.dom.IMG** implements sleipnir.core.Promise
 
 
 ## sleipnir.env

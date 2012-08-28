@@ -17,9 +17,9 @@
       , ns = {}
       , core = ns.core = {}
       , env = ns.env = {}
-      , data = ns.data = {}
+      , dom = ns.dom = {}
 
-      , version = ns.version = "0.1.2a01"
+      , version = ns.version = "0.1.3a01"
 
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
@@ -85,14 +85,26 @@
                             return _arr
                         }
                     }())
-                  , in : {
-                        array : function(arr, val){
-                            for ( var i=0, l=arr.length; i<l; i++)
-                              if ( arr[i] === val )
-                                return i
-                            return -1
+                  , indexOf : (function(){
+                        var arrIndexof = (function(){
+                            if ( !isNative(Array.prototype.indexOf) )
+                              return function(arr, val){ return arr.indexOf(val) }
+                            return function(arr, val){
+                                for ( var i=0, l=arr.length; i<l; i++)
+                                  if ( arr[i] === val )
+                                    return i
+                                return -1
+                            }
+                        }())
+                        return function(o, val){
+                            if ( helpers.is.array(o) )
+                              return arrIndexOf(o, val)
+                            else if ( helpers.is.string(o) )
+                              return o.indexOf(val)
+                            else
+                              return -1
                         }
-                    }
+                    }())
                   , trim : (function(){
                         if ( isNative(String.prototype.trim) )
                           return function(o){
@@ -329,7 +341,7 @@
                         throw new Error('target must be a valid EventEmitter')
                       if ( !ee._eeChannels.hasOwnProperty(channelName) ) return this
 
-                      var idx = _.in.array(ee._eeChannels[channelName], this)
+                      var idx = _.indexOf(ee._eeChannels[channelName], this)
                       if ( idx >= 0 )
                         ee._eeChannels[channelName].splice(idx, 1)
 
@@ -357,17 +369,25 @@
                     return this
                 }
               , resolve: function(){
+                    var args
                     this.status = 1
-                    this.emit('promise.resolved')
+                    if ( !arguments.length )
+                      this.emit('promise.resolved')
+                    else
+                      args = _.to.array(arguments),
+                      args.unshift('promise.resolved'),
+                      this.emit.apply(this, args)
                     return this
                 }
               , reject: function(){
+                    var args
                     this.status = 0
-                    this.emit('promise.rejected')
-                    return this
-                }
-              , progress: function(){
-                    this.emit('promise.progress')
+                    if ( !arguments.length )
+                      this.emit('promise.rejected')
+                    else
+                      args = _.to.array(arguments),
+                      args.unshift('promise.rejected'),
+                      this.emit.apply(this, args)
                     return this
                 }
             }
@@ -409,13 +429,25 @@
                     return this
                 }
               , resolve: function(){
+                    var args
                     this.promises.status = 1
-                    this.emit('deferrer.resolved')
+                    if ( !arguments.length )
+                      this.emit('deferrer.resolved')
+                    else
+                      args = _.to.array(arguments),
+                      args.unshift('deferrer.resolved'),
+                      this.emit.apply(this, args)
                     return this
                 }
               , reject: function(){
+                    var args
                     this.promises.status = 0
-                    this.emit('deferrer.rejected')
+                    if ( !arguments.length )
+                      this.emit('deferrer.rejected')
+                    else
+                      args = _.to.array(arguments),
+                      args.unshift('deferrer.rejected'),
+                      this.emit.apply(this, args)
                     return this
                 }
               , onprogress: function(){
@@ -498,7 +530,7 @@
             }
         })
 
-      , Usher = data.Usher = new Klass(Promise, function(_){
+      , Usher = dom.Usher = new Klass(Promise, function(_){
 
             var types = {
                     1: "append"
@@ -546,7 +578,7 @@
             }
         })
 
-      , CSS = data.CSS = new Klass(Promise, function(_){
+      , CSS = dom.CSS = new Klass(Promise, function(_){
 
             function getInlineNode(cssText, onsuccess, onerror, oldIE){
                 var node
@@ -616,8 +648,8 @@
                                 selector: head || document.head
                               , type: 1 //append
                             }
-                          , onsuccess = function(){ self.resolve() }
-                          , onerror = function(){ self.reject() }
+                          , onsuccess = function(){ self.resolve(self.node) }
+                          , onerror = function(){ self.reject(self.node) }
 
                         URL = root.URL || root.webkitURL
                         hasBlob = (root.Blob && URL.createObjectURL ) && true || false
@@ -641,9 +673,9 @@
 
                         new Usher(node, position.selector, position.type).then(function(){
                            if ( inline )
-                              self.resolve()
+                              self.resolve(node)
                         }, function(){
-                            self.reject()
+                            self.reject(node)
                         })
 
                     }, 0)
@@ -651,21 +683,11 @@
                     if ( handler )
                       this.then(handler)
                 }
-              , resolve: function(){
-                    this.status = 1
-                    this.emit('promise.resolved', this.node)
-                    return this
-                }
-              , reject: function(){
-                    this.status = 0
-                    this.emit('promise.rejected', this.node)
-                    return this
-                }
             }
         })
 
 
-      , Script = data.Script = new Klass(Promise, function(_){
+      , Script = dom.Script = new Klass(Promise, function(_){
 
 
             function getInlineBlobScriptNode(script, onsuccess, onerror){
@@ -722,8 +744,8 @@
 
                     setTimeout(function(){
                         var match, node, scriptText, scriptUrl, inline=false, URL, hasBlob
-                          , onsuccess = function(){ self.resolve() }
-                          , onerror = function(){ self.reject() }
+                          , onsuccess = function(){ self.resolve(self.node) }
+                          , onerror = function(){ self.reject(self.node) }
                           , position = (parameters.position && parameters.position.selector) && parameters.position || {
                                 selector: head || document.head
                               , type: 1 //append
@@ -749,29 +771,19 @@
 
                         new Usher(node, position.selector, position.type).then(function(){
                            if ( inline )
-                              self.resolve()
+                              self.resolve(node)
                         }, function(){
-                            //self.reject()
+                            self.reject(node)
                         })
                     }, 0)
 
                     if ( handler )
                       this.then(handler)
                 }
-              , resolve: function(){
-                    this.status = 1
-                    this.emit('promise.resolved', this.node)
-                    return this
-                }
-              , reject: function(){
-                    this.status = 0
-                    this.emit('promise.rejected', this.node)
-                    return this
-                }
             }
         })
 
-      , IMG = new Klass(Promise, function(_){
+      , IMG = dom.IMG = new Klass(Promise, function(_){
 
             function getInlineImgNode(img){
                 var node = new Image
@@ -809,8 +821,8 @@
 
                     setTimeout(function(){
                         var match, inline=false, hasBlob=false, URL, node
-                          , onsuccess = function(){ self.resolve() }
-                          , onerror = function(){ self.reject() }
+                          , onsuccess = function(){ self.resolve(self.node) }
+                          , onerror = function(){ self.reject(self.node) }
                           , position = (parameters.position && parameters.position.selector) && parameters.position || {
                               selector: head || document.head
                             , type: 1 //append
@@ -839,22 +851,12 @@
                         // todo, manage how images are handled
                         //new Usher(node, position.selection, position.type).then(function(){
                            if ( inline )
-                              self.resolve()
+                              self.resolve(node)
                         //})
                     }, 0)
 
                     if ( handler )
                       this.then(handler)
-                }
-              , resolve: function(){
-                    this.status = 1
-                    this.emit('promise.resolved', this.node)
-                    return this
-                }
-              , reject: function(){
-                    this.status = 0
-                    this.emit('promise.rejected', this.node)
-                    return this
                 }
             }
         })
@@ -876,14 +878,17 @@
                             promise = new Script(o.value, o.parameters) 
                           else
                             promise = new Script(o.value)
+                            break
                       case "css":
                             if  ( o.parameters )
                               promise =  new CSS(o.value, o.parameters)
                           promise = new CSS(o.value)
+                          break
                       case "img":
                           if  ( o.parameters )
                             promise =  new IMG(o.value, o.parameters)
                           promise = new IMG(o.value)
+                          break
                       default:
                         if ( promise )
                           value = o.value
@@ -956,46 +961,106 @@
                         _construct: function(params){
                             Promise.call(this)
                             if ( _.is.fn(arguments[0]) )
-                              console.log()
-                            else if ( !_.is.object(params) || !params.type || !params.pattern || !params.varaiable || !params.value )
+                              return this.customfn(arguments[0])
+                            else if ( !_.is.object(params) || !params.type || !params.pattern || !params.variable )
                               this.reject()
 
-                        }
-                      , customfn: function(){
+                            var type = params.type
+                            this.pattern = params.pattern
+                            this.variable = params.variable
 
+                            this[filters[type]]()
+
+                        }
+                      , customfn: function(fn){
+                            var result = fn.call(this)
+                            if (  result === true )
+                              return this.resolve()
+                            else if ( result !== null ) // if null, let the custom fn manage resolve/reject itself
+                              return this.reject()
+                            return
                         }
                       , customfnFilter: function(){
-
+                            var fn = this.pattern
+                            var result = fn.call(this, this.variable)
+                            if (  result === true )
+                              return this.resolve()
+                            else if ( result !== null ) // if null, let the custom fn manage resolve/reject itself
+                              return this.reject()
+                            return
                         }
                       , match: function(){
-
+                            if ( this.variable === this.pattern ) {
+                              this.resolve()
+                              return
+                            }
+                            this.reject()
                         }
                       , contains: function(){
-
+                            if ( !!~_.indexOf(this.variable, this.pattern) ){
+                              this.resolve()
+                              return
+                            }
+                            this.reject()
                         }
                       , startswith: function(){
-
+                            this.resolve()
                         }
                       , endswith: function(){
-
+                            this.resolve()
                         }
                       , regexp: function(){
-
+                            var regexp = new RegExp(this.pattern)
+                            if ( this.variable.match(regexp) ) {
+                              this.resolve()
+                              return
+                            }
+                            this.reject()
                         }
                       , equal: function(){
-
+                            var a = parseFloat(this.variable)
+                            var b = parseFloat(this.pattern)
+                            if ( a === b ) {
+                              this.resolve()
+                              return
+                            }
+                            this.reject()
                         }
                       , greater: function(){
-
+                            var a = parseFloat(this.variable)
+                            var b = parseFloat(this.pattern)
+                            if ( a < b ) {
+                              this.resolve()
+                              return
+                            }
+                            this.reject()
                         }
                       , lesser: function(){
-
+                            var a = parseFloat(this.variable)
+                            var b = parseFloat(this.pattern)
+                            if ( a > b ) {
+                              this.resolve()
+                              return
+                            }
+                            this.reject()
                         }
                       , greaterOrEqual: function(){
-
+                            var a = parseFloat(this.variable)
+                            var b = parseFloat(this.pattern)
+                            if ( a <= b ) {
+                              this.resolve()
+                              return
+                            }
+                            this.reject()
                         }
                       , lesserOrEqual: function(){
-
+                            var a = parseFloat(this.variable)
+                            var b = parseFloat(this.pattern)
+                            if ( a >= b ) {
+                              this.resolve()
+                              return
+                            }
+                            this.reject()
                         }
                     }
                 })
@@ -1009,6 +1074,7 @@
                     filterList = _.is.array(arguments[0]) && arguments[0] || _.to.array(arguments)
 
                     for ( var i=0,l=filterList.length; i<l; i++ )
+                        this.promises[i] = new Filter(filterList[i]),
                         (function(promise){
                             setTimeout(function(){
                                 promise.then(function(){
