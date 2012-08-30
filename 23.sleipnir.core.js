@@ -314,7 +314,16 @@
 
                     ee.emit = function(eventName){
                         var args = _.to.array(arguments)
+
                         args.shift()
+
+                        args.push({
+                            source: ee
+                          , type: eventName
+                          , arguments: args
+                          , timestamp: +(new Date)
+                        })
+
 
                         EventEmitter.prototype.emit.apply(ee, arguments)
 
@@ -1181,10 +1190,10 @@
             }
         }, true)
 
-      , sleipnir = root.sleipnir = (function(_){
+      , _55 = root._55 = (function(_){
 
             var noop = function(){}
-              , sleipnir = function(){
+              , _55 = function(){
                     if ( !arguments.length ) return ns
 
                     var args = _.to.array(arguments)
@@ -1194,9 +1203,9 @@
 
                     if ( dependencies.length )
                       return new ResourceLoader(dependencies).then(function(){
-                          sleipnir(handler, wait)
+                          _55(handler, wait)
                       }).or(function(){
-                          handler(new Error('sleipnir: error loading one of the requested resources'), _)
+                          handler(new Error('_55: error loading one of the requested resources'), _)
                       }), ns
 
                     if ( domReady || !wait )
@@ -1208,9 +1217,9 @@
                 }
 
             for ( var k in ns ) if ( ns.hasOwnProperty(k) )
-              sleipnir[k] = ns[k]  
+              _55[k] = ns[k]  
 
-            return sleipnir
+            return _55
         }(_))
 }(this))
 ;
