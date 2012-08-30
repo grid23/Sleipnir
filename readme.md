@@ -1,5 +1,5 @@
 #23.sleipnir
-( current version : v0.1.3 )
+( current version : v0.1.4 )
 
 
 Sleipnir is a Javascript framework that aims to make easier for developers to organize their front-end website architecture.

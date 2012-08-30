@@ -19,7 +19,7 @@
       , env = ns.env = {}
       , dom = ns.dom = {}
 
-      , version = ns.version = "0.1.3a01"
+      , version = ns.version = "0.1.4a01"
 
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
@@ -313,23 +313,15 @@
                     ee._eeChannels[channelName].push(this)
 
                     ee.emit = function(eventName){
-                        var args = _.to.array(arguments), event 
-
+                        var args = _.to.array(arguments)
                         args.shift()
-
-                        event = {
-                            source: ee
-                          , type: eventName
-                          , arguments: args
-                          , timestamp: +(new Date)
-                        }
 
                         EventEmitter.prototype.emit.apply(ee, arguments)
 
                         for ( var i=0, keys=_.keys(this._eeChannels), l=keys.length; i<l; i++ )
                           (function(channelName, channelers){
                               for ( var i=0, l=channelers.length; i<l; i++)
-                                channelers[i].emit(channelName, event)
+                                EventChanneler.prototype.emit.apply(channelers[i], [channelName+"."+eventName].concat(args))
                           }([keys[i]], (this._eeChannels[keys[i]]) || []) )
 
                         return this
