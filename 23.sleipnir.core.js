@@ -19,7 +19,7 @@
       , env = ns.env = {}
       , dom = ns.dom = {}
 
-      , version = ns.version = "0.1.4a01"
+      , version = ns.version = "0.1.5a01"
 
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
@@ -317,7 +317,7 @@
 
                         args.shift()
 
-                        args.push({
+                        args.unshift({
                             source: ee
                           , type: eventName
                           , arguments: args

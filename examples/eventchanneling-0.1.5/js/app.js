@@ -4,7 +4,7 @@ sleipnir(function(err, _){ "use strict"
         , Broadcaster = sleipnir.core.Klass(sleipnir.core.EventEmitter, function(){
               
               var currTXT = ""
-              eventBus.on('myapp.type', function(txt){
+              eventBus.on('myapp.type', function(e, txt){
                   currTXT = txt
               })
               
@@ -28,7 +28,7 @@ sleipnir(function(err, _){ "use strict"
                           },0)
                       })
                       
-                      eventBus.on('myapp.type', function(txt, e){
+                      eventBus.on('myapp.type', function(e, txt){
                           if ( e.source !== self )
                             self.ontype()
                       })
@@ -51,7 +51,7 @@ sleipnir(function(err, _){ "use strict"
         , Watcher = sleipnir.core.Klass(function(){
               
               var currTXT = ""
-              eventBus.on('myapp.type', function(txt){
+              eventBus.on('myapp.type', function(e, txt){
                   currTXT = txt
               })
               
