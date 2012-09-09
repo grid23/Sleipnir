@@ -217,8 +217,15 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 **sleipnir.core.ConditionSet** implements sleipnir.core.Deferrer
 
-**sleipnir.core.Model** implements sleipnir.core.EventEmitter
+## slepnir.data
 
+**sleipnir.data.Model** implements sleipnir.core.EventEmitter
+
+## sleipnir.mvc
+
+**sleipnir.mvc.Collection** implements sleipnir.core.EventChanneler
+
+**sleipnir.mvc.Model** see *sleipnir.core.Model*
 
 ## sleipnir.dom
 
@@ -237,13 +244,15 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 *(coming soon, and not implemented right now!)*
 
-**sleipnir.env.browser** implements sleipnir.core.Model
+**sleipnir.env.bus** instance of sleipnir.core.EventChanneler
 
-**sleipnir.env.device** implements sleipnir.core.Model
+**sleipnir.env.browser** istance of sleipnir.data.Model
 
-**sleipnir.env.url** implements sleipnir.core.Model
+**sleipnir.env.device** istance of sleipnir.data.Model
 
-**sleipnir.env.cookie** implements sleipnir.core.Model
+**sleipnir.env.url** istance of sleipnir.data.Model
+
+**sleipnir.env.cookie** istance of sleipnir.data.Model
 
 
 
