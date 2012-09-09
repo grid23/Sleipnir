@@ -1,29 +1,29 @@
-#23.sleipnir
-( current version : v0.1.5 )
-
+#23.sleipnir 0.2.0
 
 Sleipnir is a Javascript framework that aims to make easier for developers to organize their front-end website architecture.
+While still in its early youth and under heavy development, the milestone 0.2.0 should be ready enough to power a website.
 
-While still in its early youth and under heavy development, the milestone 0.1.0 should be ready enough to power a prototype site for testing.
+## key concepts
+- 100% event based
+- provides core classes you can and are encouraged to build upon, and it's freaking easy!
+- manages ressources loading and dependencies with ease
+- MVC ready
+- looks and feel like JavaScript
+- no UI-binding, obeys to the more-and-more-forgotten rule of separating HTML, CSS and JS
 
+## supported browsers
+Planned: ie6+, firefox 3.6+, chrome, safari 5+; opera 12+
+(*please help with the testing* :-)
 
-
-## some key concepts
-Sleipnir...
-- has a strong orientation towards Class based code.
-- is 100% event based (everything implements a base EventEmitter class)
-- thinks we should load & design everything in an async fashion
-- obeys to the more-and-more-forgotten rule of separating html, css and js
-- doesn't try to change the way JavaScript feels & looks
-
-*( more code example and a small doc coming soon... )*
-
-
+## changelog
+### 0.2.0
+- sleipnir.core.klass lost its capital K
+- mvc components appeared : sleipnir.mvc.{Collection, Model}
 
 ## How the start of a sleipnir-powered project might look like
 ```javascript
 sleipnir(function(){
-		var MyClassA = sleipnir.core.Klass(function(_){
+		var MyClassA = sleipnir.core.klass(function(_){
 			var publicStaticProperty = this.publicStaticProperty = "foo";
 			var privateStaticProperty = "bar";
 			var publicStaticMethod = this.publicStaticMethod = function(){};
@@ -36,7 +36,7 @@ sleipnir(function(){
 			}
 		});
 
-		var MyClassB = sleipnir.core.Klass(MyClassA, function(_){
+		var MyClassB = sleipnir.core.klass(MyClassA, function(_){
 			return {
 				_construct: function(){
 					var args = _.to.array(arguments)
@@ -96,6 +96,14 @@ sleipnir(function(){
 }());
 ```
 
+## how to use
+
+If you're using 23.sleipnir.boot.js, sleipnir loads itself asynchronously; any use of the sleipnir wrapper will be queued and delayed until the 23.sleipnir.core.js is loaded.
+
+```html
+<script src="path/to/23.sleipnir.boot.js" data-src="path/to/23.sleipnir.core.js"></script>
+<script>sleipnir('path/to/app.js', false)</script>
+```
 
 
 ## The sleipnir function
@@ -195,7 +203,7 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 *(coming soon)*
 
-**sleipnir.core.Klass**
+**sleipnir.core.klass**
 
 **sleipnir.core.EventEmitter**
 
@@ -209,7 +217,7 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 **sleipnir.core.ConditionSet** implements sleipnir.core.Deferrer
 
-**sleipnir.core.VariableSet** implements sleipnir.core.EventEmitter
+**sleipnir.core.Model** implements sleipnir.core.EventEmitter
 
 
 ## sleipnir.dom
@@ -229,13 +237,13 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 *(coming soon, and not implemented right now!)*
 
-**sleipnir.env.browser** implements sleipnir.core.VariableSet
+**sleipnir.env.browser** implements sleipnir.core.Model
 
-**sleipnir.env.device** implements sleipnir.core.VariableSet
+**sleipnir.env.device** implements sleipnir.core.Model
 
-**sleipnir.env.url** implements sleipnir.core.VariableSet
+**sleipnir.env.url** implements sleipnir.core.Model
 
-**sleipnir.env.cookie** implements sleipnir.core.VariableSet
+**sleipnir.env.cookie** implements sleipnir.core.Model
 
 
 

@@ -16,10 +16,12 @@
 
       , ns = {}
       , core = ns.core = {}
+      , data = ns.data = {}
+      , mvc = ns.mvc = {}
       , env = ns.env = {}
       , dom = ns.dom = {}
 
-      , version = ns.version = "0.1.5a01"
+      , version = ns.version = "0.2.0a01"
 
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
@@ -140,7 +142,7 @@
             return helpers
         }())
 
-      , Klass = core.Klass = (function(_){
+      , klass = core.klass = (function(_){
             var noop = function(){}
               , slice = Array.prototype.slice
               , toString = Object.prototype.toString
@@ -181,7 +183,7 @@
                 if ( Ancestor ) for ( var i=0, k=keys(Ancestor.prototype), l=k.length; i<l; i++ )
                   Heir.prototype[k[i]] = Ancestor.prototype[k[i]]
 
-                for ( var i=0, p=properties.call(Heir, _, Heir), k=keys(p), l=k.length; i<l; i++ )
+                for ( var i=0, p=properties.call(Heir, _, Ancestor), k=keys(p), l=k.length; i<l; i++ )
                   Heir.prototype[k[i]] = p[k[i]]
 
                 Heir.prototype.constructor = Heir.prototype._construct
@@ -192,9 +194,9 @@
             }
         }(_))
 
-      , EventEmitter = core.EventEmitter = new Klass(function(){
+      , EventEmitter = core.EventEmitter = klass(function(){
 
-            var EventHandler = this.EventHandler = new Klass(function(){
+            var EventHandler = this.EventHandler = klass(function(){
                     return {
                         _construct : function(handler, params, parent){
                             var params = params || {}
@@ -246,19 +248,6 @@
                         }
                     }
                 })
-              , Filter = new Klass(function(_){
-
-                    return {
-                        _construct: function(){
-                            if ( arguments.length === 1 && _.is.fn(arguments[0]) )
-                               (function(){}())
-                        }
-                      , test: function(){
-
-                        }
-                    }
-                })
-
 
             return {
                 _construct : function(){
@@ -296,14 +285,14 @@
             }
         })
 
-      , EventChanneler = core.EventChanneler = new Klass(EventEmitter, function(_){
+      , EventChanneler = core.EventChanneler = klass(EventEmitter, function(_, supr){
 
             return {
                 _construct: function(){
-                    EventEmitter.call(this)
+                    supr.call(this)
                 }
               , pipe: function(channelName, ee){
-                    if ( !ee._eeEvents && !ee.emit )
+                    if ( !ee._eeEvents && !ee.emit ) // let EventChanneler.pipe pass
                         throw new Error('target must be a valid EventEmitter')
 
                     var self = this
@@ -351,11 +340,11 @@
             }
         })
 
-      , Promise = core.Promise = new Klass(EventEmitter, function(){
+      , Promise = core.Promise = klass(EventEmitter, function(_, supr){
 
             return {
                 _construct: function(handler){
-                    EventEmitter.call(this)
+                    supr.call(this)
                 }
               , status: -1
               , then: function(onresolveHandler, onrejectHandler, onprogressHandler){
@@ -394,14 +383,14 @@
             }
         })
 
-      , Deferrer = core.Deferrer = new Klass(EventEmitter, function(_){
+      , Deferrer = core.Deferrer = klass(EventEmitter, function(_, supr){
             var getPercent = function(n, of){
                     if ( !of ) return 0
                     return n/of*100
                 }
             return {
                 _construct: function(){
-                    EventEmitter.call(this)
+                    supr.call(this)
                     this.promises = []
                     this.promises.resolvable = 0
                     this.promises.unresolvable = 0
@@ -466,9 +455,9 @@
             }
         })
 
-      , VariableSet = core.VariableSet = new Klass(EventEmitter, function(){
-
-            var Variable = new Klass(function(_){
+      , Model = mvc.Model = data.Model = klass(EventEmitter, function(_, supr){
+            
+            var Variable = klass(function(_, supr){
                 return {
                     _construct: function(name, value, parent){
                         var args = _.to.array(arguments)
@@ -481,21 +470,32 @@
                   , status: 0
                   , set: function(value){
                         var ovalue = this.value
+                        
+                        if ( ovalue === value ) return
+                        
                         this.value = value
-
+                        
+                        
                         if ( this.status == 0 )
                           this.parent.emit(this.name+'.add', this.value),
+                          this.parent.emit('add', this.name, this.value),
                           this.status = 1
 
                         this.parent.emit(this.name+'.change', this.value, ovalue)
+                        this.parent.emit('change', this.name, this.value, ovalue)
                     }
                   , get: function(){
+                        /* useful ?
                         this.parent.emit(this.name+'.get', this.value)
+                        this.parent.emit('get', this.name, this.value)
+                        */
                         return this.value
                     }
                   , remove: function(){
                         this.parent.emit(this.name+'.change', null, this.value)
+                        this.parent.emit('change', this.name, null, this.value)
                         this.parent.emit(this.name+'.remove')
+                        this.parent.emit('remove', this.name)
                         this.status = 0
                     }
                 }
@@ -503,12 +503,16 @@
 
             return {
                 _construct: function(variables){
-                    EventEmitter.call(this)
+                    supr.call(this)
+                    
+                    var self = this
+                    
                     this.variables = {}
-
-                    if ( !variables ) return
-                    for ( var v in variables ) if ( variables.hasOwnProperty(v) )
+                    
+                    if ( variables ) for ( var v in variables ) if ( variables.hasOwnProperty(v) )
                       this.variables[v] = new Variable(variables[v].name, variables[v].value, this)
+                    
+                    this.emit('create', this)
                 }
               , set: function(name, value){
                     if ( !this.variables.hasOwnProperty(name) )
@@ -528,10 +532,93 @@
                       delete this.variables[name]
                     return this
                 }
+              , toJSON: function(){ //return a json
+                    
+                }
+              , fromJSON: function(){ //update from a json
+                    this.emit('update')
+                }
+              , serialize: function(){ //serialize... 
+                    
+                }
+              , sync: function(){ //sync with a server
+                    this.emit('update')
+                }
+
+            }
+        })
+      
+      , XHR = data.XHR = klass(Deferrer, function(_, supr){
+            
+            var Request = this.Request = klass(Promise, function(_, supr){
+                    
+                    return {
+                        _construct: function(url, method, body, headers){
+                            supr.call(this)
+                            if ( !arguments.length )
+                              throw new Error("sleipnir.data.XHR.Request#_construct : not enough arguments")
+                            if ( arguments.length == 1 )
+                              this.method = "GET",
+                              this.body = null,
+                              this.headers = null
+                            else
+                              this.method = method,
+                              this.body = body
+                              this.headers = headers
+                        }
+                    }
+                })
+            
+            return {
+                _construct: function(){
+                    Deferrer.call(this)
+                    if ( !arguments.length )
+                      throw new Error("sleipnir.data.XHR#_construct : not enough arguments")
+                }
+            }
+        })
+      
+      , View = mvc.View = klass(EventEmitter, function(_, supr){
+            
+            
+            return {
+                _construct: function(){
+                    supr.call(this)
+                }
+            }
+        })
+        
+      , Collection = mvc.Collection = klass(EventChanneler, function(_, supr){
+            return {
+                _construct: function(){
+                    supr.call(this)
+                    var _models
+                    
+                    this.models = []
+                    
+                    if ( arguments.length == 1 && _.is.array(arguments[0]) )
+                      _models = arguments[0]
+                    else
+                      _models = arguments
+                    for ( var i=0, l=_models.length; i<l; i++ )
+                      this.add(_models[i])
+                }
+              , add: function(model){
+                    this.models.push(model)
+                    this.pipe('models', model)
+                    return this
+                }
+              , remove: function(model){
+                    var idx = _.indexOf(this.models, model)
+                    if ( !~idx ) return this
+                    this.unpipe('models', this.models[idx]),
+                    this.models.splice(idx, 1)
+                    return this
+                }
             }
         })
 
-      , Usher = dom.Usher = new Klass(Promise, function(_){
+      , Usher = dom.Usher = klass(Promise, function(_, supr){
 
             var types = {
                     1: "append"
@@ -543,7 +630,7 @@
 
             return {
                 _construct: function(node, targetNode, actionType){
-                    Promise.call(this)
+                    supr.call(this)
                     if ( !_.is.element(node) || !_.is.element(targetNode) )
                         this.reject()
                     this.node = node
@@ -579,7 +666,16 @@
             }
         })
 
-      , CSS = dom.CSS = new Klass(Promise, function(_){
+      , Ressource = dom.Resource = klass(Promise, function(_, supr){ //base for dom.{CSS, Script, IMG}
+            
+            return {
+                _construct: function(){
+                    supr.call(this)
+                }
+            }
+        })
+
+      , CSS = dom.CSS = klass(Promise, function(_, supr){
 
             function getInlineNode(cssText, onsuccess, onerror, oldIE){
                 var node
@@ -637,7 +733,7 @@
                       , parameters = args.length && args[0] || {}
                       , oldIE=false
 
-                    Promise.call(this)
+                    supr.call(this)
 
                     this.node = null
 
@@ -688,7 +784,7 @@
         })
 
 
-      , Script = dom.Script = new Klass(Promise, function(_){
+      , Script = dom.Script = klass(Promise, function(_, supr){
 
 
             function getInlineBlobScriptNode(script, onsuccess, onerror){
@@ -740,7 +836,7 @@
                       , script = args.shift()
                       , parameters = args.length && args[0] || {}
 
-                    Promise.call(this)
+                    supr.call(this)
                     this.node = null
 
                     setTimeout(function(){
@@ -784,7 +880,7 @@
             }
         })
 
-      , IMG = dom.IMG = new Klass(Promise, function(_){
+      , IMG = dom.IMG = klass(Promise, function(_, supr){
 
             function getInlineImgNode(img){
                 var node = new Image
@@ -820,6 +916,9 @@
                       , image = args.shift()
                       , parameters = args.length && args[0] || {}
 
+                    supr.call(this)
+                    this.node = null
+                    
                     setTimeout(function(){
                         var match, inline=false, hasBlob=false, URL, node
                           , onsuccess = function(){ self.resolve(self.node) }
@@ -862,7 +961,7 @@
             }
         })
 
-      , ResourceLoader = core.ResourceLoader = new Klass(Deferrer, function(_){
+      , ResourceLoader = core.ResourceLoader = klass(Deferrer, function(_, supr){
 
             function defineResourceType(o){
                 var name, value, promise
@@ -917,11 +1016,11 @@
             }
 
 
-            var resourceList = this.resourceList = new VariableSet
+            var resourceList = this.resourceList = new Model
 
             return {
                 _construct: function(){
-                      Deferrer.call(this)
+                      supr.call(this)
 
                       var self = this
                         , promises = _.is.array( arguments[0] ) && arguments[0] || _.to.array(arguments)
@@ -948,9 +1047,9 @@
             }
         })
 
-      , ConditionSet = core.ConditionSet = new Klass(Deferrer, function(_){
+      , ConditionSet = core.ConditionSet = klass(Deferrer, function(_, supr){
 
-            var Filter = new Klass(Promise, function(_){
+            var Filter = klass(Promise, function(_, supr){
 
                     var filters = {
                              0: "customfnFilter"
@@ -960,7 +1059,7 @@
 
                     return {
                         _construct: function(params){
-                            Promise.call(this)
+                            supr.call(this)
                             if ( _.is.fn(arguments[0]) )
                               return this.customfn(arguments[0])
                             else if ( !_.is.object(params) || !params.type || !params.pattern || !params.variable )
@@ -1068,7 +1167,7 @@
 
             return {
                 _construct: function(){
-                    Deferrer.call(this)
+                    supr.call(this)
                     var self = this
                       , filterList, customfn
 
@@ -1096,49 +1195,47 @@
             }
         })
 
-      , deviceMask = env.device = new Klass(VariableSet, function(){ //singleton
+      , bus = env.bus = new EventChanneler
+        
+      , deviceMask = env.device = (function(){
+            var device = new Model
+              , dpi = root.devicePixelRatio || 1
+              , ishidpi = !!(dpi-1)
+            
+            bus.pipe('device', device)
+            
+            device.set('dpi', dpi)
+            device.set('retina', ishidpi)
+            device.set('hidpi', ishidpi)
+            
+            return device
+        }())
 
-            var retina = ( root.devicePixelRatio || 1 ) >= 1.5
+      , browserMask = env.browser = (function(){
+            var browser = new Model
+            
+            bus.pipe('browser', browser)
+            
+            return browser
+        }())
 
+      , urlMask = env.url = (function(){
+            var url = new Model
+            
+            bus.pipe('url', url)
+            
+            return url
+        }())
+        
+      , cookieMask = env.cookie = (function(){
+            var cookie = new Model
+            
+            bus.pipe('cookie', cookie)
+            
+            return cookie
+        }())
 
-            return {
-                _construct: function(){
-                    VariableSet.call(this)
-
-                    this.set('retina', retina)
-                    this.set('hidpi', retina)
-                }
-            }
-        }, true)
-
-      , browserMask = env.browser = new Klass(VariableSet, function(){ //singleton
-
-            return {
-                _construct: function(){
-                    VariableSet.call(this)
-                }
-            }
-        }, true)
-
-      , urlMask = env.url = new Klass(VariableSet, function(){ //singleton
-
-            return {
-                _construct: function(){
-                    VariableSet.call(this)
-                }
-            }
-        }, true)
-
-      , cookieMask = env.cookie = new Klass(VariableSet, function(){ //singleton
-
-            return {
-                _construct: function(){
-                    VariableSet.call(this)
-                }
-            }
-        }, true)
-
-      , domReadyListener = new Klass(EventEmitter, function(){ //singleton
+      , domReadyListener = klass(EventEmitter, function(){ //singleton
             return {
                 _construct: function(){
                     EventEmitter.call(this)
