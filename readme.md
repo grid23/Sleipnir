@@ -23,22 +23,25 @@ Planned: ie6+, firefox 3.6+, chrome, safari 5+; opera 12+
 ## How the start of a sleipnir-powered project might look like
 ```javascript
 sleipnir(function(){
-		var MyClassA = sleipnir.core.klass(function(_){
+		var MyClassA = sleipnir.core.klass(function(_, supr){
 			var publicStaticProperty = this.publicStaticProperty = "foo";
 			var privateStaticProperty = "bar";
 			var publicStaticMethod = this.publicStaticMethod = function(){};
 			var privateStaticMethod = function(){};
 
 			return {
-				_construct: function(){},
+				_construct: function(){
+						console.log('instance created');
+				},
 				methodA: function(){},
 				propertyA: "foo"
 			}
 		});
 
-		var MyClassB = sleipnir.core.klass(MyClassA, function(_){
+		var MyClassB = sleipnir.core.klass(MyClassA, function(_, supr){
 			return {
 				_construct: function(){
+					supr.call(this)
 					var args = _.to.array(arguments)
 					console.log(this.propertyA + this.propertyB)
 				},
@@ -59,7 +62,9 @@ sleipnir(function(){
 (function(){
 		var slice = Array.prototype.slice;
 		var MyClassA = (function(){
-			var MyClassA = function(){}
+			var MyClassA = function(){
+					console.log('instance created');
+			}
 
 			var publicStaticProperty = MyClassA.publicStaticProperty = "foo";
 			var privateStaticProperty = "bar";
@@ -75,6 +80,7 @@ sleipnir(function(){
 		}());
 
 		var MyClassB = function(){
+			MyClassA.call(this)
 			var args = slice.call(arguments)
 			console.log(this.propertyA + this.propertyB);
 		};
