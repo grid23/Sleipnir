@@ -16,6 +16,10 @@ Planned: ie6+, firefox 3.6+, chrome, safari 5+; opera 12+
 (*please help with the testing* :-)
 
 ## changelog
+### 0.2.1
+- cleaning of code
+- sleipnir.core.ConditionSet disappeared
+
 ### 0.2.0
 - sleipnir.core.klass lost its capital K
 - mvc components appeared : sleipnir.mvc.{Collection, Model}
@@ -220,8 +224,6 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 **sleipnir.core.Deferrer** implements sleipnir.core.EventEmitter
 
 **sleipnir.core.ResourceLoader** implements sleipnir.core.Deferrer
-
-**sleipnir.core.ConditionSet** implements sleipnir.core.Deferrer
 
 ## slepnir.data
 
