@@ -1,7 +1,9 @@
 ;
 (function(root){ "use strict"
     var document = root.document
+      , location = root.location
       , navigator = root.navigator
+      , performance = root.performance
 
       , domReady = 0
 
@@ -21,7 +23,7 @@
       , env = ns.env = {}
       , dom = ns.dom = {}
 
-      , version = ns.version = "0.2.0a01"
+      , version = ns.version = "0.2.1a01"
 
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
@@ -141,7 +143,11 @@
                 }
             return helpers
         }())
-
+        
+        /*
+        * A function that makes it easy to create classes and manage inheritance
+        * @name sleipnir.core.klass
+        */
       , klass = core.klass = (function(_){
             var noop = function(){}
               , slice = Array.prototype.slice
@@ -193,7 +199,10 @@
                 return Heir
             }
         }(_))
-
+        /*
+        * An EventEmitter class, that broadcasts events, that other objects can wait for & listen
+        * @name sleipnir.core.EventEmitter
+        */
       , EventEmitter = core.EventEmitter = klass(function(){
 
             var EventHandler = this.EventHandler = klass(function(){
@@ -284,7 +293,10 @@
                 }
             }
         })
-
+       /*
+       * An EventChanneler is a special EventEmitter that can pipe other EventEmitter instances events through a channel
+       * @name sleipnir.core.EventChanneler
+       */
       , EventChanneler = core.EventChanneler = klass(EventEmitter, function(_, supr){
 
             return {
@@ -339,22 +351,26 @@
                   }
             }
         })
-
+        
+        /*
+        * An abstract class that only describes a "promise" mechanism.
+        * Classes that inherit Promise must control when resolve() or reject() is invoked.
+        * @name sleipnir.core.Promise
+        */
       , Promise = core.Promise = klass(EventEmitter, function(_, supr){
-
             return {
                 _construct: function(handler){
                     supr.call(this)
                 }
               , status: -1
-              , then: function(onresolveHandler, onrejectHandler, onprogressHandler){
-                    if ( this.status === 1 )
+              , then: function(onresolveHandler, onrejectHandler /*, onprogressHandler*/){
+                    if ( this.status == 1 && onresolveHandler )
                       return onresolveHandler(), this
-                    if ( this.status === 0 )
+                    if ( this.status == 0 && onrejectHandler )
                       return onrejectHandler(), this
                     if ( onresolveHandler) this.once('promise.resolved', onresolveHandler)
                     if ( onrejectHandler) this.once('promise.rejected', onrejectHandler)
-                    if ( onprogressHandler) this.once('promise.progress', onprogressHandler)
+                    /*if ( onprogressHandler) this.once('promise.progress', onprogressHandler)*/
 
                     return this
                 }
@@ -383,6 +399,11 @@
             }
         })
 
+        /*
+        * An abstract class that only describes a "deferring" mechanism of multiple "promises".
+        * Classes that inherit Deferrer must control when resolve() or reject() is invoked.
+        * @name sleipnir.core.Deferrer
+        */
       , Deferrer = core.Deferrer = klass(EventEmitter, function(_, supr){
             var getPercent = function(n, of){
                     if ( !of ) return 0
@@ -397,10 +418,15 @@
                     this.promises.status = -1
                 }
               , then: function(onresolveHandler, onrejectHandler, onprogressHandler){
-                    if ( this.status === 1 )
+                    if ( this.status == 1 && onresolveHandler )
                       return onresolveHandler(), this
-                    if ( this.status === 0 )
+                    
+                    if ( this.status == 0 && onrejectHandler )
                       return onrejectHandler(), this
+                    
+                    if ( this.status >= 0 )
+                      return this
+                    
                     if ( onresolveHandler) this.once('deferrer.resolved', onresolveHandler)
                     if ( onrejectHandler) this.once('deferrer.rejected', onrejectHandler)
                     if ( onprogressHandler) this.once('deferrer.progress', onprogressHandler)
@@ -454,7 +480,11 @@
                 }
             }
         })
-
+        /*
+        * A class that store key->values in an evented fashion
+        * @name sleipnir.data.Model
+        * @alias sleipnir.mvc.Model
+        */
       , Model = mvc.Model = data.Model = klass(EventEmitter, function(_, supr){
             
             var Variable = klass(function(_, supr){
@@ -547,47 +577,11 @@
 
             }
         })
-      
-      , XHR = data.XHR = klass(Deferrer, function(_, supr){
-            
-            var Request = this.Request = klass(Promise, function(_, supr){
-                    
-                    return {
-                        _construct: function(url, method, body, headers){
-                            supr.call(this)
-                            if ( !arguments.length )
-                              throw new Error("sleipnir.data.XHR.Request#_construct : not enough arguments")
-                            if ( arguments.length == 1 )
-                              this.method = "GET",
-                              this.body = null,
-                              this.headers = null
-                            else
-                              this.method = method,
-                              this.body = body
-                              this.headers = headers
-                        }
-                    }
-                })
-            
-            return {
-                _construct: function(){
-                    Deferrer.call(this)
-                    if ( !arguments.length )
-                      throw new Error("sleipnir.data.XHR#_construct : not enough arguments")
-                }
-            }
-        })
-      
-      , View = mvc.View = klass(EventEmitter, function(_, supr){
-            
-            
-            return {
-                _construct: function(){
-                    supr.call(this)
-                }
-            }
-        })
         
+        /*
+        * A class that can hold multiple sleipnir.data.Model instances, and pipe all their events through a specific channel
+        * @name sleipnir.core.Collection
+        */
       , Collection = mvc.Collection = klass(EventChanneler, function(_, supr){
             return {
                 _construct: function(){
@@ -617,7 +611,11 @@
                 }
             }
         })
-
+        
+        /*
+        * An utility class that provides a mechanism to place nodes on dom
+        * @name sleipnir.dom.Usher
+        */
       , Usher = dom.Usher = klass(Promise, function(_, supr){
 
             var types = {
@@ -668,15 +666,18 @@
 
       , Ressource = dom.Resource = klass(Promise, function(_, supr){ //base for dom.{CSS, Script, IMG}
             
+            var oldIECSS = !!document.createStyleSheet
+              , URL = root.URL || root.webkitURL || false
+              , hasBlob = (root.Blob && URL && URL.createObjectURL ) && true || false
+            
             return {
-                _construct: function(){
-                    supr.call(this)
-                }
+              
             }
         })
-
+        
+        
       , CSS = dom.CSS = klass(Promise, function(_, supr){
-
+            
             function getInlineNode(cssText, onsuccess, onerror, oldIE){
                 var node
                 if ( oldIE )
@@ -1047,193 +1048,81 @@
             }
         })
 
-      , ConditionSet = core.ConditionSet = klass(Deferrer, function(_, supr){
-
-            var Filter = klass(Promise, function(_, supr){
-
-                    var filters = {
-                             0: "customfnFilter"
-                  /*text*/ , 1: "match", 2: "contains", 3: "startswith", 4: "endswith", 5: "regexp"
-               /*numeric*/ , 6: "equal", 7: "greater", 8: "lesser", 9: "greaterOrEqual", 10: "lesserOrEqual"
-                         }
-
-                    return {
-                        _construct: function(params){
-                            supr.call(this)
-                            if ( _.is.fn(arguments[0]) )
-                              return this.customfn(arguments[0])
-                            else if ( !_.is.object(params) || !params.type || !params.pattern || !params.variable )
-                              this.reject()
-
-                            var type = params.type
-                            this.pattern = params.pattern
-                            this.variable = params.variable
-
-                            this[filters[type]]()
-
-                        }
-                      , customfn: function(fn){
-                            var result = fn.call(this)
-                            if (  result === true )
-                              return this.resolve()
-                            else if ( result !== null ) // if null, let the custom fn manage resolve/reject itself
-                              return this.reject()
-                            return
-                        }
-                      , customfnFilter: function(){
-                            var fn = this.pattern
-                            var result = fn.call(this, this.variable)
-                            if (  result === true )
-                              return this.resolve()
-                            else if ( result !== null ) // if null, let the custom fn manage resolve/reject itself
-                              return this.reject()
-                            return
-                        }
-                      , match: function(){
-                            if ( this.variable === this.pattern ) {
-                              this.resolve()
-                              return
-                            }
-                            this.reject()
-                        }
-                      , contains: function(){
-                            if ( !!~_.indexOf(this.variable, this.pattern) ){
-                              this.resolve()
-                              return
-                            }
-                            this.reject()
-                        }
-                      , startswith: function(){
-                            this.resolve()
-                        }
-                      , endswith: function(){
-                            this.resolve()
-                        }
-                      , regexp: function(){
-                            var regexp = new RegExp(this.pattern)
-                            if ( this.variable.match(regexp) ) {
-                              this.resolve()
-                              return
-                            }
-                            this.reject()
-                        }
-                      , equal: function(){
-                            var a = parseFloat(this.variable)
-                            var b = parseFloat(this.pattern)
-                            if ( a === b ) {
-                              this.resolve()
-                              return
-                            }
-                            this.reject()
-                        }
-                      , greater: function(){
-                            var a = parseFloat(this.variable)
-                            var b = parseFloat(this.pattern)
-                            if ( a < b ) {
-                              this.resolve()
-                              return
-                            }
-                            this.reject()
-                        }
-                      , lesser: function(){
-                            var a = parseFloat(this.variable)
-                            var b = parseFloat(this.pattern)
-                            if ( a > b ) {
-                              this.resolve()
-                              return
-                            }
-                            this.reject()
-                        }
-                      , greaterOrEqual: function(){
-                            var a = parseFloat(this.variable)
-                            var b = parseFloat(this.pattern)
-                            if ( a <= b ) {
-                              this.resolve()
-                              return
-                            }
-                            this.reject()
-                        }
-                      , lesserOrEqual: function(){
-                            var a = parseFloat(this.variable)
-                            var b = parseFloat(this.pattern)
-                            if ( a >= b ) {
-                              this.resolve()
-                              return
-                            }
-                            this.reject()
-                        }
-                    }
-                })
-
+      , urlMask = env.url = klass(Model, function(_, supr){
+            var noop = function(){}
+              , history = root.history || {
+                    pushState: noop
+                  , replaceState: noop
+                }
+             
+            
+              , unserializeURL = function(href){
+                    var items = href.slice(1).split(/&amp;|&/)
+                      , _obj = {}
+                    for ( var i=0, len=items.length; i<len; i++ )
+                      (function(item){
+                          var item = item.split('=')
+                            , name = unescape( item.shift() )
+                            , value = unescape( item.join('=') )
+                          _obj[name] = value
+                      }(items[i]))
+                    return _obj
+                }
+            
             return {
                 _construct: function(){
                     supr.call(this)
+                    
                     var self = this
-                      , filterList, customfn
-
-                    filterList = _.is.array(arguments[0]) && arguments[0] || _.to.array(arguments)
-
-                    for ( var i=0,l=filterList.length; i<l; i++ )
-                        this.promises[i] = new Filter(filterList[i]),
-                        (function(promise){
-                            setTimeout(function(){
-                                promise.then(function(){
-                                    self.promises.resolvable++
-                                    self.onprogress()
-                                }, function(){
-                                    self.promises.unresolvable++
-                                    self.onprogress()
-                                })
-                            }, 0)
-                        }(this.promises[i]))
-
-                        if (!arguments.length)
-                          setTimeout(function(){
-                              self.resolve()
-                          }, 0)
+                    
+                    root.addEventListener('popstate', function(){
+                        self.update()
+                    })
+                    
+                    root.addEventListener('hashchange', function(){
+                        self.update()
+                    })
+                    
+                    this.update()
+                }
+              , update: function(){
+                    if ( this.get('href') === location.href )
+                      return this
+                    
+                    this.set('href', location.href )
+                    this.set('protocol', location.protocol.slice(0, -1))
+                    this.set('port', location.port)
+                    this.set('host', location.host)
+                    this.set('path', location.path)
+                    this.set('search', location.search)
+                    this.set('hash', location.hash)
+                    this.set('queries', unserializeURL(location.href))
+                    
+                    return this
+                }
+              , replace: function(state, title, url){
+                    history.replaceState(state, title, url)
+                    this.update()
+                    return this
+                }
+              , push: function(state, title, url){
+                    history.pushState(state, title, url)
+                    this.update()
+                    return this
                 }
             }
-        })
-
-      , bus = env.bus = new EventChanneler
-        
-      , deviceMask = env.device = (function(){
-            var device = new Model
-              , dpi = root.devicePixelRatio || 1
-              , ishidpi = !!(dpi-1)
+        }, true)
+      
+      , router = ns.router = klass(EventChanneler, function(_, supr){
             
-            bus.pipe('device', device)
+            var routes = new Model
             
-            device.set('dpi', dpi)
-            device.set('retina', ishidpi)
-            device.set('hidpi', ishidpi)
-            
-            return device
-        }())
-
-      , browserMask = env.browser = (function(){
-            var browser = new Model
-            
-            bus.pipe('browser', browser)
-            
-            return browser
-        }())
-
-      , urlMask = env.url = (function(){
-            var url = new Model
-            
-            bus.pipe('url', url)
-            
-            return url
-        }())
-        
-      , cookieMask = env.cookie = (function(){
-            var cookie = new Model
-            
-            bus.pipe('cookie', cookie)
-            
-            return cookie
-        }())
+            return {
+                _construct: function(){
+                    supr.call(this)
+                }
+            }
+        }, true)
 
       , domReadyListener = klass(EventEmitter, function(){ //singleton
             return {
