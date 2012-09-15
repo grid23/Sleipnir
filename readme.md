@@ -1,4 +1,4 @@
-#23.sleipnir 0.2.0
+#23.sleipnir 0.2.1
 
 Sleipnir is a Javascript framework that aims to make easier for developers to organize their front-end website architecture.
 While still in its early youth and under heavy development, the milestone 0.2.0 should be ready enough to power a website.
