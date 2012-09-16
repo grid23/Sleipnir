@@ -252,13 +252,15 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 *(coming soon)*
 
+**sleipnir.dom.DomResource** implements sleipnir.core.Promise
+
 **sleipnir.dom.Usher** implements sleipnir.core.Promise
 
-**sleipnir.dom.Script** implements sleipnir.core.Promise
+**sleipnir.dom.Script** implements sleipnir.dom.DomResource
 
-**sleipnir.dom.CSS** implements sleipnir.core.Promise
+**sleipnir.dom.CSS** implements sleipnir.core.DomResource
 
-**sleipnir.dom.IMG** implements sleipnir.core.Promise
+**sleipnir.dom.IMG** implements sleipnir.core.DomResource
 
 
 ## sleipnir.env
