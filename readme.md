@@ -12,6 +12,11 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 - looks and feel like JavaScript
 - no UI-binding, obeys to the more-and-more-forgotten rule of separating HTML, CSS and JS
 
+
+## roadmap
+0.3 JSDOC, jasmine tests, env.{cookie, device, browser}
+0.2 mvc components, env.url, router
+
 ## changelog
 ### 0.2.2
 - dom.{Script, CSS, IMG} have been unified through a superclass dom.DomResource, meaning more shared code, yeah.

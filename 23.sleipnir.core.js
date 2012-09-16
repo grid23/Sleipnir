@@ -1,4 +1,11 @@
 ;
+
+/*
+* @name 23.sleipnir
+* @autor Benjamin Moulin, hello@grid23.net
+*
+*/
+
 (function(root){ "use strict"
     var document = root.document
       , location = root.location
@@ -1120,8 +1127,3 @@
         }(_))
 }(this))
 ;
-
-
-/*
-
-*/
