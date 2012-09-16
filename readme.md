@@ -1,4 +1,4 @@
-#23.sleipnir 0.2.1
+#23.sleipnir 0.2.2
 
 Sleipnir is a Javascript framework that aims to make easier for developers to organize their front-end website architecture.
 While still in its early youth and under heavy development, the milestone 0.2.0 should be ready enough to power a website.
@@ -11,13 +11,14 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 - looks and feel like JavaScript
 - no UI-binding, obeys to the more-and-more-forgotten rule of separating HTML, CSS and JS
 
-## supported browsers
-Planned: ie6+, firefox 3.6+, chrome, safari 5+; opera 12+
-(*please help with the testing* :-)
-
 ## changelog
+### 0.2.2
+- dom.{Script, CSS, IMG} have been unified through a superclass dom.DomResource, meaning more shared code, yeah.
+- Deferrer can now save data of the promesses they're managing
+- The sleipnir wrapper function now returns that data (for now, each nodes of the resources loaded) opening the way to more awesome stuff in the near future
+
 ### 0.2.1
-- cleaning of code
+- code cleaning
 - sleipnir.core.ConditionSet disappeared
 
 ### 0.2.0
@@ -255,8 +256,6 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 ## sleipnir.env
 
 *(coming soon, and not implemented right now!)*
-
-**sleipnir.env.bus** instance of sleipnir.core.EventChanneler
 
 **sleipnir.env.browser** instance of sleipnir.data.Model
 

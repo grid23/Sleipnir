@@ -14,16 +14,19 @@
       , rbase64 = /^(image\/(.*);base64.*)$/i
       , rimgurl = /\.gif|jpg|png|jpeg($|\?\S*$)/
 
+      , URL = root.URL || root.webkitURL || false
+      , hasBlob = (root.Blob && URL && URL.createObjectURL ) && true || false
+      
       , body, head, docElt
 
       , ns = {}
       , core = ns.core = {}
       , data = ns.data = {}
-      , mvc = ns.mvc = {}
-      , env = ns.env = {}
       , dom = ns.dom = {}
+      , env = ns.env = {}
+      , mvc = ns.mvc = {}
 
-      , version = ns.version = "0.2.1a01"
+      , version = ns.version = "0.2.2a01"
 
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
@@ -199,12 +202,12 @@
                 return Heir
             }
         }(_))
+        
         /*
         * An EventEmitter class, that broadcasts events, that other objects can wait for & listen
         * @name sleipnir.core.EventEmitter
         */
       , EventEmitter = core.EventEmitter = klass(function(){
-
             var EventHandler = this.EventHandler = klass(function(){
                     return {
                         _construct : function(handler, params, parent){
@@ -293,12 +296,12 @@
                 }
             }
         })
+        
        /*
        * An EventChanneler is a special EventEmitter that can pipe other EventEmitter instances events through a channel
        * @name sleipnir.core.EventChanneler
        */
       , EventChanneler = core.EventChanneler = klass(EventEmitter, function(_, supr){
-
             return {
                 _construct: function(){
                     supr.call(this)
@@ -416,6 +419,7 @@
                     this.promises.resolvable = 0
                     this.promises.unresolvable = 0
                     this.promises.status = -1
+                    this.yields = []
                 }
               , then: function(onresolveHandler, onrejectHandler, onprogressHandler){
                     if ( this.status == 1 && onresolveHandler )
@@ -447,22 +451,24 @@
               , resolve: function(){
                     var args
                     this.promises.status = 1
-                    if ( !arguments.length )
+                    if ( !arguments.length && !this.yields.length )
                       this.emit('deferrer.resolved')
                     else
                       args = _.to.array(arguments),
                       args.unshift('deferrer.resolved'),
+                      args.push(this.yields),
                       this.emit.apply(this, args)
                     return this
                 }
               , reject: function(){
                     var args
                     this.promises.status = 0
-                    if ( !arguments.length )
+                    if ( !arguments.length && !this.yields.length )
                       this.emit('deferrer.rejected')
                     else
                       args = _.to.array(arguments),
                       args.unshift('deferrer.rejected'),
+                      args.push(this.yields),
                       this.emit.apply(this, args)
                     return this
                 }
@@ -472,21 +478,22 @@
                     if ( percent != 100 )
                       this.emit('deferrer.progress', percent )
                     else
-                      if ( !this.promises.unresolvable )
+                      if ( !this.promises.unresolvable ) {
                         this.resolve()
+                      }
                       else
                         this.reject()
                     return this
                 }
             }
         })
+        
         /*
         * A class that store key->values in an evented fashion
         * @name sleipnir.data.Model
         * @alias sleipnir.mvc.Model
         */
       , Model = mvc.Model = data.Model = klass(EventEmitter, function(_, supr){
-            
             var Variable = klass(function(_, supr){
                 return {
                     _construct: function(name, value, parent){
@@ -664,300 +671,203 @@
             }
         })
 
-      , Ressource = dom.Resource = klass(Promise, function(_, supr){ //base for dom.{CSS, Script, IMG}
-            
-            var oldIECSS = !!document.createStyleSheet
-              , URL = root.URL || root.webkitURL || false
-              , hasBlob = (root.Blob && URL && URL.createObjectURL ) && true || false
-            
+      , DomResource = dom.DomResource = klass(Promise, function(_, supr){ //base for dom.{CSS, Script, IMG}
             return {
-              
-            }
-        })
-        
-        
-      , CSS = dom.CSS = klass(Promise, function(_, supr){
-            
-            function getInlineNode(cssText, onsuccess, onerror, oldIE){
-                var node
-                if ( oldIE )
-                  node = document.createStyleSheet(),
-                  node.cssText = cssText,
-                  node.onerror = onerror
-                else
-                  node = document.createElement('style'),
-                  node.type = "text/css",
-                  node.textContent = cssText
-                return node
-            }
-
-            function getInlineBlobNode(cssText, onsuccess, onerror){
-                var blob, blobUrl, URL = root.URL || root.webkitURL, node
-
-                blob = new Blob([cssText], {"type": "text\/css"})
-                blobUrl = URL.createObjectURL(blob)
-                node = document.createElement('link')
-                node.rel = "stylesheet"
-                node.type = "text/css"
-                node.onload = node.onreadystatechange = function(){
-                    if ( node.readyState && "complete, loaded".indexOf(node.readyState) <0 ) return
-                    node.onreadystatechange = null
-                    node.onload = null
-                    onsuccess()
-                }
-                node.onerror = onerror
-                node.href = blobUrl
-                return node
-            }
-
-            function getExternalNode(cssURL, onsuccess, onerror){
-                var node = document.createElement('link')
-                node.rel = "stylesheet"
-                node.type = "text/css"
-                node.onload = node.onreadystatechange = function(){
-                    if ( node.readyState && "complete, loaded".indexOf(node.readyState) <0 ) return
-                    node.onreadystatechange = null
-                    node.onload = null
-                    onsuccess()
-                }
-                node.onerror = onerror
-                node.href = cssURL
-                return node
-            }
-
-            return {
-                _construct: function(css, parameters, handler){ 
+                _construct: function(file, parameters, handler){
                     var self=this
                       , args = _.to.array(arguments)
                       , handler = _.is.fn(args[args.length-1]) && args.pop() || null
-                      , css = args.shift()
+                      , file = args.shift()
                       , parameters = args.length && args[0] || {}
-                      , oldIE=false
-
+                    
                     supr.call(this)
-
-                    this.node = null
-
-                    oldIE = this._oldIE = document.createStyleSheet && true || false
-
-                    setTimeout(function(){ //kind of async'ing
-                        var node, match, cssText, cssUrl, hasBlob=false, URL, inline=false
-                          , position = (parameters.position && parameters.position.selector) && parameters.position || {
-                                selector: head || document.head
-                              , type: 1 //append
-                            }
-                          , onsuccess = function(){ self.resolve(self.node) }
-                          , onerror = function(){ self.reject(self.node) }
-
-                        URL = root.URL || root.webkitURL
-                        hasBlob = (root.Blob && URL.createObjectURL ) && true || false
-
-                        if ( match = css.match(rstyle), match )
-                          inline = true,
-                          cssText = match[2]
-                        else
-                          inline = false,
-                          cssUrl = css
-
-                        if ( hasBlob && inline )
-                            node = getInlineBlobNode(cssText, onsuccess, onerror),
-                            inline = false // treated now as an external file
-                        else if ( inline )
-                            node = getInlineNode(cssText, oldIE)
-                        else
-                            node = getExternalNode(cssUrl, onsuccess, onerror)
-
-                        self.node = node
-
-                        new Usher(node, position.selector, position.type).then(function(){
-                           if ( inline )
-                              self.resolve(node)
-                        }, function(){
-                            self.reject(node)
-                        })
-
-                    }, 0)
-
-                    if ( handler )
-                      this.then(handler)
-                }
-            }
-        })
-
-
-      , Script = dom.Script = klass(Promise, function(_, supr){
-
-
-            function getInlineBlobScriptNode(script, onsuccess, onerror){
-                var blob, blobUrl, URL = root.URL || root.webkitURL, node
-
-                blob = new Blob([script], {"type": "text\/javascript"})
-                blobUrl = URL.createObjectURL(blob)
-                node = document.createElement('script')
-                node.type = "text/javascript"
-                node.async = true
-                node.onload = node.onreadystatechange = function(){
-                    if ( node.readyState && "complete, loaded".indexOf(node.readyState) <0 ) return
-                    node.onreadystatechange = null
-                    node.onload = null
-                    onsuccess()
-                }
-                node.onerror = onerror
-                node.src = blobUrl
-                return node
-            }
-
-            function getInlineScriptNode(script){
-                var node = document.createElement('script')
-                node.type = "text/javascript"
-                node.innerHTML = script
-                return node
-            }
-
-            function getExternalScriptNode(script, onsuccess, onerror){
-                var node = document.createElement('script')
-                node.type = "text/javascript"
-                node.async = true
-                node.onload = node.onreadystatechange = function(){
-                    if ( node.readyState && "complete, loaded".indexOf(node.readyState) <0 ) return
-                    node.onreadystatechange = null
-                    node.onload = null
-                    onsuccess()
-                }
-                node.onerror = onerror
-                node.src = script
-                return node
-            }
-
-            return {
-                _construct: function(script, parameters, handler){
-                    var self = this
-                      , args = _.to.array(arguments)
-                      , handler = _.is.fn(args[args.length-1]) && args.pop() || null
-                      , script = args.shift()
-                      , parameters = args.length && args[0] || {}
-
-                    supr.call(this)
-                    this.node = null
-
-                    setTimeout(function(){
-                        var match, node, scriptText, scriptUrl, inline=false, URL, hasBlob
-                          , onsuccess = function(){ self.resolve(self.node) }
-                          , onerror = function(){ self.reject(self.node) }
-                          , position = (parameters.position && parameters.position.selector) && parameters.position || {
-                                selector: head || document.head
-                              , type: 1 //append
-                            }
-                        URL = root.URL || root.webkitURL
-                        hasBlob = (root.Blob && URL.createObjectURL ) && true || false
-
-                        if ( match = script.match(rscript), match )
-                            scriptText = match[2],
-                            inline = true
-                        else
-                            scriptUrl = script
-
-                        if ( hasBlob && inline )
-                          node = getInlineBlobScriptNode(scriptText, onsuccess, onerror),
-                          inline = false
-                        else if ( inline )
-                          node = getInlineScriptNode(scriptText)
-                        else
-                          node = getExternalScriptNode(scriptUrl, onsuccess, onerror)
-
-                        self.node = node
-
-                        new Usher(node, position.selector, position.type).then(function(){
-                           if ( inline )
-                              self.resolve(node)
-                        }, function(){
-                            self.reject(node)
-                        })
-                    }, 0)
-
-                    if ( handler )
-                      this.then(handler)
-                }
-            }
-        })
-
-      , IMG = dom.IMG = klass(Promise, function(_, supr){
-
-            function getInlineImgNode(img){
-                var node = new Image
-                node.src = img
-                return node
-            }
-
-            function getInlineBlobImgNode(img, type, onsuccess, onerror){
-                var node, blob, bloburl
-                blob = new Blob([script], {"type": type})
-                blobUrl = URL.createObjectURL(blob)
-                node = new Image
-                node.onload = onsuccess
-                node.onerror = onerror
-                node.src = blobUrl
-                return node
-            }
-
-            function getExternalImgNode(img, onsuccess, onerror){
-                var node = new Image
-                node.onload = onsuccess
-                node.onerror = onerror
-                node.src = img
-                return node
-            }
-
-
-            return {
-                _construct: function(image, parameters, handler){
-                    var self = this
-                      , args = _.to.array(arguments)
-                      , handler = _.is.fn(args[args.length-1]) && args.pop() || null
-                      , image = args.shift()
-                      , parameters = args.length && args[0] || {}
-
-                    supr.call(this)
-                    this.node = null
                     
                     setTimeout(function(){
-                        var match, inline=false, hasBlob=false, URL, node
+                        var node, match, fileText, fileUrl, inline
+                          , position = self.position = (parameters.position && parameters.position.node) && parameters.position || self.defaultPosition
                           , onsuccess = function(){ self.resolve(self.node) }
                           , onerror = function(){ self.reject(self.node) }
-                          , position = (parameters.position && parameters.position.selector) && parameters.position || {
-                              selector: head || document.head
-                            , type: 1 //append
-                          }
-
-                        URL = root.URL || root.webkitURL
-                        hasBlob = (root.Blob && URL.createObjectURL ) && true || false
-
-                        if ( match = image.match('rbase64'), match )
-                            imgSRC = "data:"+image,
-                            imgType = match[2],
-                            inline = true
+                       
+                       if ( match = file.match(self.rinline), match )
+                          inline = true,
+                          fileText = match[2]
                         else
-                            imgSRC = image
-
-                        if ( inline & hasBlob )
-                          node = getInlineBlobImgNode(imgSRC, imgType, onsuccess, onerror),
-                          inline = false
+                          inline = false,
+                          fileUrl = file
+                        
+                        if ( hasBlob && inline )
+                            node = self.getBlobNode(fileText, onsuccess, onerror),
+                            inline = false // treated now as an external file
                         else if ( inline )
-                          node = getInlineImgNode(imgSRC)
+                            node = self.getInlineNode(fileText)
                         else
-                          node = getExternalImgNode(imgSRC, onsuccess, onerror)
-
-                        self.node = node
-
-                        // todo, manage how images are handled
-                        //new Usher(node, position.selection, position.type).then(function(){
-                           if ( inline )
-                              self.resolve(node)
-                        //})
+                            node = self.getExternalNode(fileUrl, onsuccess, onerror)
+                        
+                        self.node = node 
+                        
+                        if ( position )
+                          new Usher(node, position.node, position.type).then(function(){
+                             if ( inline )
+                                self.resolve(node)
+                          }, function(){
+                              self.reject(node)
+                          })
+                        else
+                          if ( inline )
+                            self.resolve(node)
                     }, 0)
-
+                    
                     if ( handler )
                       this.then(handler)
+                }
+              , rinline: /.^/
+              , defaultPosition: null
+              , position: null
+              , getInlineNode: function(){}
+              , getBlobNode: function(){}
+              , getExternalNode: function(){}
+            }
+        })
+        
+      , Script = dom.Script = klass(DomResource, function(_, supr){
+            var defaultPosition = {
+                    node: head || document.head
+                  , type: 1 //append
+                }
+            
+            return {
+                rinline: rscript
+              , _construct: function(file, params, handler){
+                    this.defaultPosition = defaultPosition
+                    supr.call(this, file, params, handler)
+                }
+              , getInlineNode: function(script){
+                    var node = document.createElement('script')
+                    node.type = "text/javascript"
+                    node.innerHTML = script
+                    return node
+                }
+              , getBlobNode: function(script, onsuccess, onerror){
+                    var blob, blobUrl, node
+                    blob = new Blob([script], {"type": "text\/javascript"})
+                    blobUrl = URL.createObjectURL(blob)
+                    node = document.createElement('script')
+                    node.type = "text/javascript"
+                    node.async = true
+                    node.onload = node.onreadystatechange = function(){
+                        if ( node.readyState && "complete, loaded".indexOf(node.readyState) <0 ) return
+                        node.onreadystatechange = null
+                        node.onload = null
+                        onsuccess()
+                    }
+                    node.onerror = onerror
+                    node.src = blobUrl
+                    return node
+                }
+              , getExternalNode: function(script, onsuccess, onerror){
+                    var node = document.createElement('script')
+                    node.type = "text/javascript"
+                    node.async = true
+                    node.onload = node.onreadystatechange = function(){
+                        if ( node.readyState && "complete, loaded".indexOf(node.readyState) <0 ) return
+                        node.onreadystatechange = null
+                        node.onload = null
+                        onsuccess()
+                    }
+                    node.onerror = onerror
+                    node.src = script
+                    return node
+                }
+            }
+        })
+        
+      , CSS = dom.CSS = klass(DomResource, function(_, supr){
+            var oldIE = document.createStyleSheet && true || false
+              , defaultPosition = {
+                  node: head || document.head
+                , type: 1 //append
+              }
+            
+            return {
+                rinline: rstyle
+              , _construct: function(file, params, handler){
+                    this.defaultPosition = defaultPosition
+                    supr.call(this, file, params, handler)
+                }
+              , getInlineNode: function(cssText, onsuccess, onerror, oldIE){
+                    var node
+                    if ( oldIE )
+                      node = document.createStyleSheet(),
+                      node.cssText = cssText,
+                      node.onerror = onerror
+                    else
+                      node = document.createElement('style'),
+                      node.type = "text/css",
+                      node.textContent = cssText
+                    return node
+                }
+              , getBlobNode: function(cssText, onsuccess, onerror){
+                    var blob, blobUrl, URL = root.URL || root.webkitURL, node
+                
+                    blob = new Blob([cssText], {"type": "text\/css"})
+                    blobUrl = URL.createObjectURL(blob)
+                    node = document.createElement('link')
+                    node.rel = "stylesheet"
+                    node.type = "text/css"
+                    node.onload = node.onreadystatechange = function(){
+                        if ( node.readyState && "complete, loaded".indexOf(node.readyState) <0 ) return
+                        node.onreadystatechange = null
+                        node.onload = null
+                        onsuccess()
+                    }
+                    node.onerror = onerror
+                    node.href = blobUrl
+                    return node
+                }
+              , getExternalNode: function(cssURL, onsuccess, onerror){
+                    var node = document.createElement('link')
+                    node.rel = "stylesheet"
+                    node.type = "text/css"
+                    node.onload = node.onreadystatechange = function(){
+                        if ( node.readyState && "complete, loaded".indexOf(node.readyState) <0 ) return
+                        node.onreadystatechange = null
+                        node.onload = null
+                        onsuccess()
+                    }
+                    node.onerror = onerror
+                    node.href = cssURL
+                    return node
+                }
+            }
+        })
+      
+      , IMG = dom.IMG = klass(DomResource, function(_, supr){
+            return {
+                rinline: rbase64
+              , _construct: function(file, params, handler){
+                    supr.call(this, file, params, handler)
+                }
+              , getInlineNode: function(img){
+                    var node = new Image
+                    node.src = img
+                    return node
+                }
+              , getBlobNode: function(img, type, onsuccess, onerror){
+                    var node, blob, bloburl
+                    blob = new Blob([script], {"type": type})
+                    blobUrl = URL.createObjectURL(blob)
+                    node = new Image
+                    node.onload = onsuccess
+                    node.onerror = onerror
+                    node.src = blobUrl
+                    return node
+                }
+              , getExternalNode: function(img, onsuccess, onerror){
+                    var node = new Image
+                    node.onload = onsuccess
+                    node.onerror = onerror
+                    node.src = img
+                    return node
                 }
             }
         })
@@ -1025,12 +935,13 @@
 
                       var self = this
                         , promises = _.is.array( arguments[0] ) && arguments[0] || _.to.array(arguments)
-
+                      
                       for ( var i=0, l=promises.length; i<l; i++ )
                         this.promises[i] = defineResourceType( promises[i] ),
-                        (function(promise){
+                        (function(promise, i){
                             setTimeout(function(){
-                                promise.then(function(){
+                                promise.then(function(data){
+                                    self.yields[i] = data
                                     self.promises.resolvable++
                                     self.onprogress()
                                 }, function(){
@@ -1038,7 +949,7 @@
                                     self.onprogress()
                                 })
                             }, 0)
-                        }(this.promises[i]))
+                        }(this.promises[i], i))
 
                       if ( !arguments.length )
                         setTimeout(function(){
@@ -1128,7 +1039,6 @@
             return {
                 _construct: function(){
                     EventEmitter.call(this)
-                    domReady = 0
                     var self = this
                       , onready = function(){
                             if ( domReady )
@@ -1177,7 +1087,6 @@
         }, true)
 
       , sleipnir = root.sleipnir = (function(_){
-
             var noop = function(){}
               , sleipnir = function(){
                     if ( !arguments.length ) return ns
@@ -1188,8 +1097,10 @@
                       , dependencies = args
 
                     if ( dependencies.length )
-                      return new ResourceLoader(dependencies).then(function(){
-                          sleipnir(handler, wait)
+                      return new ResourceLoader(dependencies).then(function(data){
+                          sleipnir(function(err, _){
+                              handler(err, _, data)
+                          }, wait)
                       }).or(function(){
                           handler(new Error('sleipnir: error loading one of the requested resources'), _)
                       }), ns
