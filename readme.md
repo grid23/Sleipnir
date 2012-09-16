@@ -5,6 +5,7 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 
 ## key concepts
 - 100% event based
+- 100% OOP
 - provides core classes you can and are encouraged to build upon, and it's freaking easy!
 - manages ressources loading and dependencies with ease
 - MVC ready
