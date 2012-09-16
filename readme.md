@@ -16,6 +16,7 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 - dom.{Script, CSS, IMG} have been unified through a superclass dom.DomResource, meaning more shared code, yeah.
 - Deferrer can now save data of the promesses they're managing
 - The sleipnir wrapper function now returns that data (for now, each nodes of the resources loaded) opening the way to more awesome stuff in the near future
+- added an example, a calculator written in a MVC fashion
 
 ### 0.2.1
 - code cleaning
