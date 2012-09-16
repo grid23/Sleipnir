@@ -193,12 +193,13 @@ sleipnir({type:"css", value:"<style>body{background:black;}</style>", position:{
 // 1: "append", 2: "prepend", 3: "insertBefore", 4: "insertAfter", 5: "replaceWith"
 ```
 
-By default, image file are not placed on DOM at all, but you get the nodes at your disposal
+By default, image files are not placed on DOM at all, but you get the nodes at your disposal
 ```javascript
 var images = ['path/to/img1.png', 'path/to/img2.png', 'path/to/img3.png']
 sleipnir(images, function(err, _, data){ if ( err ) throw new Error;
 	console.log("images nodes are available in data", data);
 });
+```
 
 It can be overrided.
 ```javascript
