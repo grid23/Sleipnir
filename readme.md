@@ -203,6 +203,7 @@ sleipnir(images, function(err, _, data){ if ( err ) throw new Error;
 
 It can be overrided.
 ```javascript
+var targetNode = document.getElementById('foo');
 sleipnir({ type:"img", value:"path/to/img.png", position:{node:, type:1}}, function(err, _, data){ if ( err ) throw new Error;
 	console.log("image node stile available in data", data[0]);
 });
