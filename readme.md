@@ -20,8 +20,8 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 ## changelog
 ### 0.2.2
 - dom.{Script, CSS, IMG} have been unified through a superclass dom.DomResource, meaning more shared code, yeah.
-- Deferrer can now save data of the promesses they're managing
-- The sleipnir wrapper function now returns that data (for now, each nodes of the resources loaded) opening the way to more awesome stuff in the near future
+- core.Deferrer  instances can now save data of the core.Promise instances they're managing
+- The sleipnir wrapper function now returns that data opening the way to more awesome stuff in the near future (for now, each nodes of the resources being loaded)
 - added an example, a calculator written in a MVC fashion
 
 ### 0.2.1
@@ -138,52 +138,55 @@ The sleipnir wrapper function takes another function as its main argument. That 
 The passed function will be invoked with two arguments :
 - error : if an error has occured while loading dependencies, you will know
 - _ : helpers library
+- data : an array containing all the data yielded during the loading of resources.
 
 ```javascript
-sleipnir(function(err, _){
+sleipnir(function(err, _, data){
 	console.log('fire at DOMContentLoaded');
 });
 ```
 ```javascript
-sleipnir(function(err, _){
+sleipnir(function(err, _, data){
 	console.log('fire ASAP');
 }, false);
 ```
 ```javascript
-sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw new Error('Houston, we have a problem.'); }
+sleipnir('//code.jquery.com/jquery.min.js', function(err, _, data){ if ( err ) { throw new Error('Houston, we have a problem.'); }
 	console.log('fire whenever jquery is loaded, or DOMContentLoaded is fired, whichever happens last');
+	console.log('jquery node is', data[0])
 });
 ```
 ```javascript
-sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw new Error('Houston, we have a problem.'); }
+sleipnir('//code.jquery.com/jquery.min.js', function(err, _, data){ if ( err ) { throw new Error('Houston, we have a problem.'); }
 	console.log('fire whenever jquery is loaded');
+	console.log('jquery node is', data[0])
 },false);
 ```
 
 You can load as many dependencies as needed, of many kinds, examples :
 ```javascript
-sleipnir('fileA.js', function(err){ if ( err ) throw new Error;
-	console.log("a single js file");
+sleipnir('fileA.js', function(err, _, data){ if ( err ) throw new Error;
+	console.log("a single js file", data[0]);
 })
 
-sleipnir('fileA.js', "fileB.css", function(err){ if ( err ) throw new Error;
-	console.log("two external files, one js, one css");
+sleipnir('fileA.js', "fileB.css", function(err, _, data){ if ( err ) throw new Error;
+	console.log("two external files, one js", data[0], "one css", data[1]);
 });
 
-sleipnir("<scr"+"ipt>window.x = \"x\"</scr"+"ipt>", function(err){ if ( err ) throw new Error;
-	console.log("inline script file, ugly, but hey");
+sleipnir("<scr"+"ipt>window.x = \"x\"</scr"+"ipt>", function(err, _, data){ if ( err ) throw new Error;
+	console.log("inline script file, ugly, but hey", data[0]);
 });
 
-sleipnir("<style>body{background:black;}</style>", function(err){ if ( err ) throw new Error;
-	console.log("inline css file");
+sleipnir("<style>body{background:black;}</style>", function(err, _, data){ if ( err ) throw new Error;
+	console.log("inline css file", data[0]);
 });
 ```
 
 By default, css and script files are placed at the bottom of the head node, but it can be overrided
 ```javascript
 var targetNode = document.getElementByTagName('style')[0]
-sleipnir({type:"css", value:"<style>body{background:black;}</style>", position:{selector:targetNode, type:3}}, function(err){ if ( err ) throw new Error;
-	console.log("inline css file");
+sleipnir({type:"css", value:"<style>body{background:black;}</style>", position:{selector:targetNode, type:3}}, function(err, _, data){ if ( err ) throw new Error;
+	console.log("inline css file", data[0]);
 });
 
 //type corresponds to :
@@ -213,8 +216,6 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 **Notes :**
 - In modern browsers, if you pass an inline tag, it will be transformed as a blob file, which is awesome and is easier to manipulate (events for onload, onerror).
-- There is no way right now to get references of your created nodes in the sleipnir invoked callback, but it's planned in the future (a way to do that for the moment is to use sleipnir.dom.{CSS,Script}).
-- loading of images is not very well supported right now, but can still be used as a preloading thing.
 
 
 ## sleipnir.core
