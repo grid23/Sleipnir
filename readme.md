@@ -19,8 +19,9 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 
 ## changelog
 ## 0.2.3
-- repo reorganisation
+- repo cleaning
 - 23.sleipnir.boot looks for data-core custom attribute instead of data-src
+- helpers reorganization
 
 ### 0.2.2
 - dom.{Script, CSS, IMG} have been unified through a superclass dom.DomResource, meaning more shared code, yeah.
