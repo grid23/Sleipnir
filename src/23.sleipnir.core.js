@@ -31,7 +31,6 @@
       , data = ns.data = {}
       , dom = ns.dom = {}
       , env = ns.env = {}
-      , mvc = ns.mvc = {}
 
       , version = ns.version = "0.2.2a01"
 
@@ -41,116 +40,121 @@
               , isNative = function(fn){
                     return typeof fn == "function" && fn.toString().match(/\s\[native code\]\s/)
                 }
-              , helpers = {
-                    is : {
-                        "arguments" : function(o){
-                            return toString.call(o) == "[object Arguments]"
-                        }
-                      , "array" : (function(){
-                            if ( isNative(Array.isArray) )
-                              return function(o){ return Array.isArray(o) }
-                            return function(o){ return o instanceof Array || toString.call(o) == "[object Array]" }
-                        }())
-                      , "boolean" : function(o){
-                            return toString.call(o) == "[object Boolean]"
-                        }
-                      , "fn" : function(o){ // "function" would cause "identifier expected" error in crappy crap old-ie
-                            return typeof o == "function"
-                        }
-                      , "element" : function(o){
-                            return (o instanceof HTMLElement)
-                        }
-                      , "null" : function(o){
-                            return o === null
-                        }
-                      , "number" : function(o){
-                            return typeof o == "number" || toString.call(o) == ["object Number"]
-                        }
-                      , "object" : function(o){
-                            return typeof o == "object" && o && o.constructor === Object
-                        }
-                      , "primitive" : function(){}
-                      , "regexp" : function(o){
-                            return toString.call(o) == "[object Regexp]"
-                        }
-                      , "string" : function(o){
-                            return typeof o == "string" || toString.call(o) == "[object String]"
-                        }
-                      , "undefined" : function(o){
-                            return typeof o == "undefined"
-                        }
+              , helpers = {}
+              
+              , is = helpers.is = {
+                    "arguments" : function(o){
+                        return toString.call(o) == "[object Arguments]"
                     }
-                  , to : { 
-                        array : function(o){
-                            if ( toString.call(o) == "[object Arguments]" )
-                              return slice.call(o)
-                            return []
-                        }
+                  , "array" : (function(){
+                        if ( isNative(Array.isArray) )
+                          return function(o){ return Array.isArray(o) }
+                        return function(o){ return o instanceof Array || toString.call(o) == "[object Array]" }
+                    }())
+                  , "boolean" : function(o){
+                        return toString.call(o) == "[object Boolean]"
                     }
-                  , keys : (function(){
-                        if ( isNative(Object.keys) )
-                          return function(o){
-                              return Object.keys(o)
-                          }
-                        return function(o){
-                            var _arr = []
-                            for ( var k in o ) if ( o.hasOwnProperty(k) )
-                              _arr.push(k)
-                            return _arr
-                        }
-                    }())
-                  , indexOf : (function(){
-                        var arrIndexof = (function(){
-                            if ( !isNative(Array.prototype.indexOf) )
-                              return function(arr, val){ return arr.indexOf(val) }
-                            return function(arr, val){
-                                for ( var i=0, l=arr.length; i<l; i++)
-                                  if ( arr[i] === val )
-                                    return i
-                                return -1
-                            }
-                        }())
-                        return function(o, val){
-                            if ( helpers.is.array(o) )
-                              return arrIndexOf(o, val)
-                            else if ( helpers.is.string(o) )
-                              return o.indexOf(val)
-                            else
-                              return -1
-                        }
-                    }())
-                  , trim : (function(){
-                        if ( isNative(String.prototype.trim) )
-                          return function(o){
-                                return o.trim()
-                          }
-                        return function(){
-                              return o.replace(/^\s+/g,'').replace(/\s+$/g,'')
-                        }
-                    }())
-                  , mix : function mix(){
-                        var o
-                        if ( helpers.is.object(arguments[0]) )
-                          o = {}
-                        else if ( helpers.is.array(arguments[0]) )
-                          o = []
-                        else
-                          throw new Error('bad argument type')
-
-                        for (var i=0, l=arguments.length; i<l; i++)  if ( (arguments[i]).constructor === (o).constructor  )
-                          (function(t){
-                              for ( var p in t ) if ( t.hasOwnProperty(p) ) {
-                                if ( helpers.is.object(t[p]) || helpers.is.array(t[p]) ) {
-                                  if ( !helpers.is.object(o[p]) && !helpers.is.array(o[p]) ) o[p] = mix(t[p])
-                                  else o[p] = mix(o[p], t[p])
-                                }
-                                else
-                                  o[p] = t[p]
-                                }
-                          }(arguments[i]))
-                        return o
+                  , "fn" : function(o){ // "function" would cause "identifier expected" error in crappy crap old-ie
+                        return typeof o == "function"
+                    }
+                  , "element" : function(o){
+                        return (o instanceof HTMLElement)
+                    }
+                  , "null" : function(o){
+                        return o === null
+                    }
+                  , "number" : function(o){
+                        return typeof o == "number" || toString.call(o) == ["object Number"]
+                    }
+                  , "object" : function(o){
+                        return typeof o == "object" && o && o.constructor === Object
+                    }
+                  , "primitive" : function(){} //todo
+                  , "regexp" : function(o){
+                        return toString.call(o) == "[object Regexp]"
+                    }
+                  , "string" : function(o){
+                        return typeof o == "string" || toString.call(o) == "[object String]"
+                    }
+                  , "undefined" : function(o){
+                        return typeof o == "undefined"
+                    }
+                  }
+                  
+              , to = helpers.to = { 
+                    array : function(o){ //todo, complete
+                        if ( toString.call(o) == "[object Arguments]" )
+                          return slice.call(o)
+                        return []
                     }
                 }
+                    
+              , keys = helpers.keys = (function(){
+                    if ( isNative(Object.keys) )
+                      return function(o){
+                          return Object.keys(o)
+                      }
+                    return function(o){
+                        var _arr = []
+                        for ( var k in o ) if ( o.hasOwnProperty(k) )
+                          _arr.push(k)
+                        return _arr
+                    }
+                }())
+                  
+              , indexOf = helpers.indexOf = (function(){
+                    var arrIndexof = (function(){
+                        if ( !isNative(Array.prototype.indexOf) )
+                          return function(arr, val){ return arr.indexOf(val) }
+                        return function(arr, val){
+                            for ( var i=0, l=arr.length; i<l; i++)
+                              if ( arr[i] === val )
+                                return i
+                            return -1
+                        }
+                    }())
+                    return function(o, val){
+                        if ( is.array(o) )
+                          return arrIndexOf(o, val)
+                        else if ( is.string(o) )
+                          return o.indexOf(val)
+                        throw new Error('sleipnir.utils.indexOf : bad argument type')
+                    }
+                }())
+                    
+              , trim = helpers.trim = (function(){
+                    if ( isNative(String.prototype.trim) )
+                      return function(o){
+                            return o.trim()
+                      }
+                    return function(){
+                          return o.replace(/^\s+/g,'').replace(/\s+$/g,'')
+                    }
+                }())
+              
+              , mix = helpers.mix = function mix(){
+                    var o
+                    if ( is.object(arguments[0]) )
+                      o = {}
+                    else if ( is.array(arguments[0]) )
+                      o = []
+                    else
+                      throw new Error('bad argument type')
+    
+                    for (var i=0, l=arguments.length; i<l; i++)  if ( (arguments[i]).constructor === (o).constructor  )
+                      (function(t){
+                          for ( var p in t ) if ( t.hasOwnProperty(p) ) {
+                            if ( is.object(t[p]) || is.array(t[p]) ) {
+                              if ( !is.object(o[p]) && !is.array(o[p]) ) o[p] = mix(t[p])
+                              else o[p] = mix(o[p], t[p])
+                            }
+                            else
+                              o[p] = t[p]
+                            }
+                      }(arguments[i]))
+                    return o
+                }
+                
             return helpers
         }())
         
@@ -500,7 +504,7 @@
         * @name sleipnir.data.Model
         * @alias sleipnir.mvc.Model
         */
-      , Model = mvc.Model = data.Model = klass(EventEmitter, function(_, supr){
+      , Model = data.Model = klass(EventEmitter, function(_, supr){
             var Variable = klass(function(_, supr){
                 return {
                     _construct: function(name, value, parent){
@@ -596,7 +600,7 @@
         * A class that can hold multiple sleipnir.data.Model instances, and pipe all their events through a specific channel
         * @name sleipnir.core.Collection
         */
-      , Collection = mvc.Collection = klass(EventChanneler, function(_, supr){
+      , Collection = data.Collection = klass(EventChanneler, function(_, supr){
             return {
                 _construct: function(){
                     supr.call(this)
@@ -805,12 +809,11 @@
                     var node
                     if ( oldIE )
                       node = document.createStyleSheet(),
-                      node.cssText = cssText,
-                      node.onerror = onerror
+                      node.cssText = cssText
                     else
                       node = document.createElement('style'),
                       node.type = "text/css",
-                      node.textContent = cssText
+                      node.innerHTML = cssText
                     return node
                 }
               , getBlobNode: function(cssText, onsuccess, onerror){
@@ -1031,13 +1034,42 @@
             }
         }, true)
       
-      , router = ns.router = klass(EventChanneler, function(_, supr){
+      , router = ns.router = klass(Collection, function(_, supr){
             
-            var routes = new Model
+            var Route = new klass(Model, function(_, supr){
+                    return {
+                        _construct: function(path, name){
+                            supr.call(this)
+                            
+                            this.set('path', path)
+                            this.set('name', name)
+                        }
+                    }
+                })
             
             return {
                 _construct: function(){
                     supr.call(this)
+                    this.pipe('url', env.url)
+                }
+              , add: function(routes){
+                    if ( !arguments.length || (arguments.length == 1 && !_.is.object(arguments[0])) )
+                      throw new Error("sleipnir.router#set error: bad argument")
+                    
+                    var self = this
+                    , _routes = {}, key
+                    
+                    if ( arguments.length > 1 )
+                      routes[arguments[0]] = arguments[1]
+                    else {
+                      routes = arguments[0]
+                      for ( key in routes ) if ( routes.hasOwnProperty(key) )
+                        (function(route){
+                            self.models.push( route )
+                            self.pipe('routes', route)
+                        }( new Route(key, routes[key]) ))
+                    }
+                    return this
                 }
             }
         }, true)

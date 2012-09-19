@@ -1,4 +1,4 @@
-#23.sleipnir 0.2.2
+#23.sleipnir 0.2.3
 
 Sleipnir is a Javascript framework that aims to make easier for developers to organize their front-end website architecture.
 While still in its early youth and under heavy development, the milestone 0.2.0 should be ready enough to power a website.
@@ -18,6 +18,10 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 - 0.2.x : mvc components, env.url, router
 
 ## changelog
+## 0.2.3
+- repo reorganisation
+- 23.sleipnir.boot looks for data-core custom attribute instead of data-src
+
 ### 0.2.2
 - dom.{Script, CSS, IMG} have been unified through a superclass dom.DomResource, meaning more shared code, yeah.
 - core.Deferrer  instances can now save data of the core.Promise instances they're managing
@@ -119,7 +123,7 @@ sleipnir(function(){
 If you're using 23.sleipnir.boot.js, sleipnir loads itself asynchronously; any use of the sleipnir wrapper will be queued and delayed until the 23.sleipnir.core.js is loaded.
 
 ```html
-<script src="path/to/23.sleipnir.boot.js" data-src="path/to/23.sleipnir.core.js"></script>
+<script src="path/to/23.sleipnir.boot.js" data-core="path/to/23.sleipnir.core.js"></script>
 <script>sleipnir('path/to/app.js', false)</script>
 ```
 
