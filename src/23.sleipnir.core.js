@@ -24,6 +24,8 @@
       , URL = root.URL || root.webkitURL || false
       , hasBlob = (root.Blob && URL && URL.createObjectURL ) && true || false
       
+      , noop = function(){}
+      
       , body, head, docElt
 
       , ns = {}
@@ -32,7 +34,7 @@
       , dom = ns.dom = {}
       , env = ns.env = {}
 
-      , version = ns.version = "0.2.2a01"
+      , version = ns.version = "0.2.4a01"
 
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
@@ -163,47 +165,35 @@
         * @name sleipnir.core.klass
         */
       , klass = core.klass = (function(_){
-            var noop = function(){}
-              , slice = Array.prototype.slice
-              , toString = Object.prototype.toString
-              , keys = (function(){
-                    if ( Object.keys ) return function(o){ return Object.keys(o) }
-                    return function(o){ 
-                        var _arr = [], k
-                        for ( k in o ) if ( o.hasOwnProperty(k) )
-                          _arr.push(k)
-                        return _arr
-                    }
-                }())
-
             return function(Ancestor, properties, singleton){
-                var args = slice.call(arguments)
+                var args = _.to.array(arguments)
                   , singleton = false, properties, Ancestor, Heir
 
-                if ( toString.call(args[args.length-1]) == '[object Boolean]' )
+                if ( _.is.boolean(args[args.length-1]) )
                   singleton = !!args.pop()
 
                 properties = args.pop()
                 Ancestor = args[0]
 
                 Heir = function(){
+                    var length = arguments.length
                     if ( !Heir.prototype._construct ) return this
-                    if ( arguments.length == 0 )
+                    if ( length == 0 )
                       Heir.prototype._construct.call(this)
-                    else if ( arguments.length == 1 )
+                    else if ( length == 1 )
                       Heir.prototype._construct.call(this, arguments[0])
-                    else if ( arguments.length == 2 )
+                    else if ( length == 2 )
                       Heir.prototype._construct.call(this, arguments[0], arguments[1])
-                    else if ( arguments.length == 3 )
+                    else if ( length == 3 )
                       Heir.prototype._construct.call(this, arguments[0], arguments[1], arguments[2])
                     else
                       Heir.prototype._construct.apply(this, arguments)
                 }
 
-                if ( Ancestor ) for ( var i=0, k=keys(Ancestor.prototype), l=k.length; i<l; i++ )
+                if ( Ancestor ) for ( var i=0, k=_.keys(Ancestor.prototype), l=k.length; i<l; i++ )
                   Heir.prototype[k[i]] = Ancestor.prototype[k[i]]
 
-                for ( var i=0, p=properties.call(Heir, _, Ancestor), k=keys(p), l=k.length; i<l; i++ )
+                for ( var i=0, p=properties.call(Heir, _, Ancestor), k=_.keys(p), l=k.length; i<l; i++ )
                   Heir.prototype[k[i]] = p[k[i]]
 
                 Heir.prototype.constructor = Heir.prototype._construct
@@ -218,7 +208,7 @@
         * An EventEmitter class, that broadcasts events, that other objects can wait for & listen
         * @name sleipnir.core.EventEmitter
         */
-      , EventEmitter = core.EventEmitter = klass(function(){
+      , EventEmitter = core.EventEmitter = klass(function(_){
             var EventHandler = this.EventHandler = klass(function(){
                     return {
                         _construct : function(handler, params, parent){
@@ -332,12 +322,14 @@
 
                         args.shift()
 
+                        /* useful ?
                         args.unshift({
                             source: ee
                           , type: eventName
                           , arguments: args
                           , timestamp: +(new Date)
                         })
+                        */
 
 
                         EventEmitter.prototype.emit.apply(ee, arguments)
@@ -970,17 +962,15 @@
         })
 
       , urlMask = env.url = klass(Model, function(_, supr){
-            var noop = function(){}
-              , history = root.history || {
-                    pushState: noop
-                  , replaceState: noop
+            var history = root.history || {
+                    pushState: function(){}
+                  , replaceState: function(){}
                 }
-             
-            
+                
               , unserializeURL = function(href){
                     var items = href.slice(1).split(/&amp;|&/)
                       , _obj = {}
-                    for ( var i=0, len=items.length; i<len; i++ )
+                    for ( var i=0, l=items.length; i<l; i++ )
                       (function(item){
                           var item = item.split('=')
                             , name = unescape( item.shift() )
@@ -1014,10 +1004,10 @@
                     this.set('protocol', location.protocol.slice(0, -1))
                     this.set('port', location.port)
                     this.set('host', location.host)
-                    this.set('path', location.path)
+                    this.set('path', location.pathname)
                     this.set('search', location.search)
                     this.set('hash', location.hash)
-                    this.set('queries', unserializeURL(location.href))
+                    this.set('queries', unserializeURL(location.search))
                     
                     return this
                 }
@@ -1037,12 +1027,55 @@
       , router = ns.router = klass(Collection, function(_, supr){
             
             var Route = new klass(Model, function(_, supr){
+                    var types = this.types = {
+                          "/": "path"
+                        , "?": "search"
+                        , "#": "hash"
+                      }
+                    , paths = this.paths = {
+                          "/": function(o){ return new RegExp('^'+o) }
+                        , "?": function(o){ return new RegExp(o.slice(1)) }
+                        , "#": function(o){ return new RegExp(o.slice(1)) }
+                      }
+                         
                     return {
-                        _construct: function(path, name){
+                        _construct: function(_path, name){
                             supr.call(this)
                             
+                            var self = this
+                              , operator = _path.slice(0,1)
+                              , type = types[operator]
+                              , path = paths[operator](_path)
+                              , currVal = env.url.get(type)
+                            
+                            this.set('type', type)
                             this.set('path', path)
                             this.set('name', name)
+                            
+                            env.url.on(type+'.change', function(nval, oval){
+                                self.test(nval)
+                            })
+                            
+                            setTimeout(function(){
+                                self.test(currVal)
+                            }, 0)
+                        }
+                      , status: 0
+                      , test: function(val){
+                            var match = val.match(this.get('path'))
+                              , name = this.get('name')
+                            
+                            if ( !match ) {
+                              if ( this.status == 1)
+                                this.emit('exit', name, match),
+                                this.emit(name+'.exit', name, match),
+                                this.status = 0
+                              return
+                            }
+                            if ( this.status == 0 )
+                              this.status = 1,
+                              this.emit('enter', name, match),
+                              this.emit(name+'.enter', match)
                         }
                     }
                 })
@@ -1052,23 +1085,28 @@
                     supr.call(this)
                     this.pipe('url', env.url)
                 }
-              , add: function(routes){
+              , when: function(){
                     if ( !arguments.length || (arguments.length == 1 && !_.is.object(arguments[0])) )
                       throw new Error("sleipnir.router#set error: bad argument")
                     
                     var self = this
-                    , _routes = {}, key
+                      , routes = {}
                     
                     if ( arguments.length > 1 )
                       routes[arguments[0]] = arguments[1]
-                    else {
+                    else
                       routes = arguments[0]
-                      for ( key in routes ) if ( routes.hasOwnProperty(key) )
-                        (function(route){
-                            self.models.push( route )
-                            self.pipe('routes', route)
-                        }( new Route(key, routes[key]) ))
-                    }
+                    
+                    for ( var i=0, keys=_.keys(routes), l=keys.length; i<l; i++ )
+                      (function(route){
+                          self.models.push( route )
+                          self.pipe('routes', route)
+                      }( new Route(keys[i], routes[keys[i]]) ))
+                    
+                    return this
+                }
+              , set: function(state, title, url){
+                    env.url.push(state, title, url)
                     return this
                 }
             }
@@ -1126,8 +1164,7 @@
         }, true)
 
       , sleipnir = root.sleipnir = (function(_){
-            var noop = function(){}
-              , sleipnir = function(){
+            var sleipnir = function(){
                     if ( !arguments.length ) return ns
 
                     var args = _.to.array(arguments)

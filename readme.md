@@ -1,4 +1,4 @@
-#23.sleipnir 0.2.3
+#23.sleipnir 0.2.4
 
 Sleipnir is a Javascript framework that aims to make easier for developers to organize their front-end website architecture.
 While still in its early youth and under heavy development, the milestone 0.2.0 should be ready enough to power a website.
@@ -18,6 +18,11 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 - 0.2.x : mvc components, env.url, router
 
 ## changelog
+## 0.2.4
+- code cleaning
+- first version of sleipnir.router that actually does something
+- sleipnir.mvc disappeared, sleipnir.data holds Model and Collection
+
 ## 0.2.3
 - repo cleaning
 - 23.sleipnir.boot looks for data-core custom attribute instead of data-src
@@ -259,15 +264,9 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 *(coming soon)*
 
+**sleipnir.data.Collection** implements sleipnir.core.EventChanneler
+
 **sleipnir.data.Model** implements sleipnir.core.EventEmitter
-
-## sleipnir.mvc
-
-*(coming soon)*
-
-**sleipnir.mvc.Collection** implements sleipnir.core.EventChanneler
-
-**sleipnir.mvc.Model** see *sleipnir.core.Model*
 
 ## sleipnir.dom
 
