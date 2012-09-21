@@ -18,12 +18,12 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 - 0.2.x : mvc components, env.url, router
 
 ## changelog
-## 0.2.4
+### 0.2.4
 - code cleaning
 - first version of sleipnir.router that actually does something
 - sleipnir.mvc disappeared, sleipnir.data holds Model and Collection
 
-## 0.2.3
+### 0.2.3
 - repo cleaning
 - 23.sleipnir.boot looks for data-core custom attribute instead of data-src
 - helpers reorganization
