@@ -14,7 +14,7 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 
 
 ## roadmap
-- 0.3.x : JSDOC, jasmine tests, env.{cookie, device, browser}
+- 0.3.x : JSDOC, qunit tests, env.{cookie, device, browser}
 - 0.2.x : mvc components, env.url, router
 
 ## changelog
