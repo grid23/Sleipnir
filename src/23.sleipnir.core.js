@@ -1061,6 +1061,7 @@
                             }, 0)
                         }
                       , status: 0
+                      , match: null
                       , test: function(val){
                             var match = val.match(this.get('path'))
                               , name = this.get('name')
@@ -1072,7 +1073,8 @@
                                 this.status = 0
                               return
                             }
-                            if ( this.status == 0 )
+                            if ( this.status == 0 || match !== this.match )
+                              this.match = match,
                               this.status = 1,
                               this.emit('enter', name, match),
                               this.emit(name+'.enter', match)
