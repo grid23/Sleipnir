@@ -18,6 +18,11 @@ While still in its early youth and under heavy development, the milestone 0.2.0 
 - 0.2.x : mvc components, env.url, router
 
 ## changelog
+### 0.2.5
+- all classes now have extend and create static properties, for people who fear the "new" keyword
+- sleipnir.router is now a common core class, to be instanciated ( sleipnir.core.Router )
+- sleipnir.core.Router now fully works, but sleipnir.env.url which is the heart of the routing process is still pretty rudimentary (needs work for browsers compat.) 
+
 ### 0.2.4
 - code cleaning
 - first version of sleipnir.router that actually does something
@@ -260,6 +265,8 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 **sleipnir.core.ResourceLoader** implements sleipnir.core.Deferrer
 
+**sleipnir.core.Router** implements sleipnir.data.Collection
+
 ## slepnir.data
 
 *(coming soon)*
@@ -285,15 +292,9 @@ sleipnir('//code.jquery.com/jquery.min.js', function(err, _){ if ( err ) { throw
 
 ## sleipnir.env
 
-*(coming soon, and not implemented right now!)*
-
-**sleipnir.env.browser** instance of sleipnir.data.Model
-
-**sleipnir.env.device** instance of sleipnir.data.Model
+*(coming soon)*
 
 **sleipnir.env.url** instance of sleipnir.data.Model
-
-**sleipnir.env.cookie** instance of sleipnir.data.Model
 
 
 

@@ -34,7 +34,7 @@
       , dom = ns.dom = {}
       , env = ns.env = {}
 
-      , version = ns.version = "0.2.4a01"
+      , version = ns.version = "0.2.5a01"
 
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
@@ -164,7 +164,7 @@
         * A function that makes it easy to create classes and manage inheritance
         * @name sleipnir.core.klass
         */
-      , klass = core.klass = (function(_){
+      , klass = core.klass = (function klass(_){
             return function(Ancestor, properties, singleton){
                 var args = _.to.array(arguments)
                   , singleton = false, properties, Ancestor, Heir
@@ -197,7 +197,16 @@
                   Heir.prototype[k[i]] = p[k[i]]
 
                 Heir.prototype.constructor = Heir.prototype._construct
-
+                
+                Heir.extend = function(fn){
+                    var singleton = _.is.object(arguments[arguments.length-1]) && arguments[arguments.length-1] || false
+                    return klass(Heir, fn, singleton)
+                }
+                
+                Heir.create = function(){
+                    return new Heir
+                }
+                
                 if ( singleton )
                   return new Heir
                 return Heir
@@ -365,7 +374,7 @@
         */
       , Promise = core.Promise = klass(EventEmitter, function(_, supr){
             return {
-                _construct: function(handler){
+                _construct: function(){
                     supr.call(this)
                 }
               , status: -1
@@ -497,6 +506,10 @@
         * @alias sleipnir.mvc.Model
         */
       , Model = data.Model = klass(EventEmitter, function(_, supr){
+            this.create = function(variables){
+                return new Model(variables)
+            }
+            
             var Variable = klass(function(_, supr){
                 return {
                     _construct: function(name, value, parent){
@@ -593,6 +606,10 @@
         * @name sleipnir.core.Collection
         */
       , Collection = data.Collection = klass(EventChanneler, function(_, supr){
+            this.create = function(){
+                return new Collection
+            }
+        
             return {
                 _construct: function(){
                     supr.call(this)
@@ -621,13 +638,144 @@
                 }
             }
         })
-        
+
+        , Router = ns.core.Router = klass(Collection, function(_, supr){
+            this.create = function(){
+                return new Router
+            }
+            
+            this.set = function(state, title, url){
+                env.url.push(state, title, url)
+                return this
+            }
+            
+            var Route = new klass(Model, function(_, supr){
+                    var types = this.types = {
+                          "/": "path"
+                        , "?": "search"
+                        , "#": "hash"
+                      }
+                    , paths = this.paths = {
+                          "/": function(o){ return new RegExp('^'+o) }
+                        , "?": function(o){ return new RegExp(o.slice(1)) }
+                        , "#": function(o){ return new RegExp(o.slice(1)) }
+                      }
+                         
+                    return {
+                        _construct: function(_path, name){
+                            supr.call(this)
+                            
+                            var self = this
+                              , operator = _path.slice(0,1)
+                              , type = types[operator]
+                              , path = paths[operator](_path)
+                            
+                            this.set('type', type)
+                            this.set('path', path)
+                            this.set('name', name)
+                            this.set('match', null)
+                            
+                            env.url.on(type+'.change', function(){
+                                self.test()
+                            })
+                        }
+                      , status: 0
+                      , test: function(){
+                            var val = env.url.get(this.get('type'))
+                              , match = val.match(this.get('path'))
+                              , name = this.get('name')
+                            
+                            if ( !match ) {
+                              if ( this.status == 1)
+                                this.emit('exit', name, match),
+                                this.emit(name+'.exit', name, match),
+                                this.status = 0
+                              return
+                            }
+                            if ( this.status == 0 || match !== this.get('match') )
+                              this.set('match', match),
+                              this.status = 1,
+                              this.emit('enter', name, match),
+                              this.emit(name+'.enter', match)
+                        }
+                    }
+                })
+            
+            return {
+                _construct: function(){
+                    supr.call(this)
+                    this.pipe('url', env.url)
+                    this.routes = {}
+                }
+              , on: function(){
+                    var args = _.to.array(arguments)
+                      , eventName = args.shift()
+                      , match = eventName.match(/routes\.([^\.]*)\.(?:enter|exit)/)
+                      , name = match && match[1] || eventName
+                      , wait = _.is.boolean( args[args.length-1] ) && !args.pop() || true
+                      , handler = _.is.fn( args[args.length-1] ) && args.pop() || noop
+                      , dependencies = args
+                      , route = this.routes[name]
+                    
+                    if ( !match )
+                      return EventEmitter.prototype.on.apply(this, arguments), this
+                    
+                    EventEmitter.prototype.on.call(this, eventName, function(matches){
+                        if ( dependencies.length )
+                          new ResourceLoader(dependencies).then(function(data){
+                              var data = data || {}
+                              data.matches = matches
+                              sleipnir(function(err, _){
+                                  handler(err, _, data)
+                              }, wait)
+                          }).or(function(){
+                              handler(new Error('sleipnir: error loading one of the requested resources'), _)
+                          })
+                        else
+                          sleipnir(function(err, _, data){
+                              var data = data || {}
+                              data.matches = matches
+                              handler(err, _, data)
+                          }, wait)
+                    })
+                    
+                    if ( route )
+                      route.test()
+                    return this
+                }
+              , when: function(){
+                    if ( !arguments.length || (arguments.length == 1 && !_.is.object(arguments[0])) )
+                      throw new Error("sleipnir.router#set error: bad argument")
+                    
+                    var self = this
+                      , routes = {}
+                    
+                    if ( arguments.length > 1 )
+                      routes[arguments[0]] = arguments[1]
+                    else
+                      routes = arguments[0]
+                    
+                    for ( var i=0, keys=_.keys(routes), l=keys.length; i<l; i++ )
+                      (function(route, name){
+                          self.models.push( route )
+                          self.pipe('routes', route)
+                          self.routes[name] = route
+                      }( new Route(keys[i], routes[keys[i]]), routes[keys[i]] ))
+                    
+                    return this
+                }
+            }
+        })
+
         /*
         * An utility class that provides a mechanism to place nodes on dom
         * @name sleipnir.dom.Usher
         */
       , Usher = dom.Usher = klass(Promise, function(_, supr){
-
+            this.create = function(node, targetNode, actionType){
+                return new Usher(node, targetNode, actionType)
+            }
+            
             var types = {
                     1: "append"
                   , 2: "prepend"
@@ -675,6 +823,10 @@
         })
 
       , DomResource = dom.DomResource = klass(Promise, function(_, supr){ //base for dom.{CSS, Script, IMG}
+            this.create = function(file, parameters, handler){
+                return new DomResource(file, parameters, handler)
+            }
+            
             return {
                 _construct: function(file, parameters, handler){
                     var self=this
@@ -733,6 +885,10 @@
         })
         
       , Script = dom.Script = klass(DomResource, function(_, supr){
+            this.create = function(file, params, handler){
+                return new Script(file, params, handler)
+            }
+            
             var defaultPosition = {
                     node: head || document.head
                   , type: 1 //append
@@ -785,6 +941,10 @@
         })
         
       , CSS = dom.CSS = klass(DomResource, function(_, supr){
+            this.create = function(file, params, handler){
+                return new CSS(file, params, handler)
+            }
+            
             var oldIE = document.createStyleSheet && true || false
               , defaultPosition = {
                   node: head || document.head
@@ -844,6 +1004,10 @@
         })
       
       , IMG = dom.IMG = klass(DomResource, function(_, supr){
+            this.create = function(file, params, handler){
+                return new IMG(file, params, handler)
+            }
+            
             return {
                 rinline: rbase64
               , _construct: function(file, params, handler){
@@ -875,7 +1039,10 @@
         })
 
       , ResourceLoader = core.ResourceLoader = klass(Deferrer, function(_, supr){
-
+            this.create = function(resources){
+                return new ResourceLoader(resources)
+            }
+            
             function defineResourceType(o){
                 var name, value, promise
                   , isObj = _.is.object(o)
@@ -1023,96 +1190,6 @@
                 }
             }
         }, true)
-      
-      , router = ns.router = klass(Collection, function(_, supr){
-            
-            var Route = new klass(Model, function(_, supr){
-                    var types = this.types = {
-                          "/": "path"
-                        , "?": "search"
-                        , "#": "hash"
-                      }
-                    , paths = this.paths = {
-                          "/": function(o){ return new RegExp('^'+o) }
-                        , "?": function(o){ return new RegExp(o.slice(1)) }
-                        , "#": function(o){ return new RegExp(o.slice(1)) }
-                      }
-                         
-                    return {
-                        _construct: function(_path, name){
-                            supr.call(this)
-                            
-                            var self = this
-                              , operator = _path.slice(0,1)
-                              , type = types[operator]
-                              , path = paths[operator](_path)
-                              , currVal = env.url.get(type)
-                            
-                            this.set('type', type)
-                            this.set('path', path)
-                            this.set('name', name)
-                            
-                            env.url.on(type+'.change', function(nval, oval){
-                                self.test(nval)
-                            })
-                            
-                            setTimeout(function(){
-                                self.test(currVal)
-                            }, 0)
-                        }
-                      , status: 0
-                      , match: null
-                      , test: function(val){
-                            var match = val.match(this.get('path'))
-                              , name = this.get('name')
-                            
-                            if ( !match ) {
-                              if ( this.status == 1)
-                                this.emit('exit', name, match),
-                                this.emit(name+'.exit', name, match),
-                                this.status = 0
-                              return
-                            }
-                            if ( this.status == 0 || match !== this.match )
-                              this.match = match,
-                              this.status = 1,
-                              this.emit('enter', name, match),
-                              this.emit(name+'.enter', match)
-                        }
-                    }
-                })
-            
-            return {
-                _construct: function(){
-                    supr.call(this)
-                    this.pipe('url', env.url)
-                }
-              , when: function(){
-                    if ( !arguments.length || (arguments.length == 1 && !_.is.object(arguments[0])) )
-                      throw new Error("sleipnir.router#set error: bad argument")
-                    
-                    var self = this
-                      , routes = {}
-                    
-                    if ( arguments.length > 1 )
-                      routes[arguments[0]] = arguments[1]
-                    else
-                      routes = arguments[0]
-                    
-                    for ( var i=0, keys=_.keys(routes), l=keys.length; i<l; i++ )
-                      (function(route){
-                          self.models.push( route )
-                          self.pipe('routes', route)
-                      }( new Route(keys[i], routes[keys[i]]) ))
-                    
-                    return this
-                }
-              , set: function(state, title, url){
-                    env.url.push(state, title, url)
-                    return this
-                }
-            }
-        }, true)
 
       , domReadyListener = klass(EventEmitter, function(){ //singleton
             return {
@@ -1173,7 +1250,7 @@
                       , wait = _.is.boolean( args[args.length-1] ) && !args.pop() || true
                       , handler = _.is.fn( args[args.length-1] ) && args.pop() || noop
                       , dependencies = args
-
+                    
                     if ( dependencies.length )
                       return new ResourceLoader(dependencies).then(function(data){
                           sleipnir(function(err, _){
