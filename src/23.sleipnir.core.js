@@ -220,13 +220,10 @@
       , EventEmitter = core.EventEmitter = klass(function(_){
             var EventHandler = this.EventHandler = klass(function(){
                     return {
-                        _construct : function(handler, params, parent){
-                            var params = params || {}
+                        _construct : function(handler, runs, parent){
                             this.handler = handler
-                            this.runs = params.runs || Infinity
-                            this.filters = params.filters || null
-                            this.USE_RUNS = !!params.runs
-                            this.USE_FILTERS = !!params.filters
+                            this.runs = runs || Infinity
+                            this.USE_RUNS = !!runs
                             this.parent = parent
                         }
                       , fire : function(args){
@@ -234,32 +231,20 @@
                               , handler = this.handler
                               , context = this.parent
                               , runsError = false
-                              , filterError = false
 
-                            if ( this.USE_RUNS ) {
-                              if ( !this.runs )
-                                runsError = true,
+                            if ( this.USE_RUNS )
+                              if ( this.runs > 0 )
                                 this.runs = this.runs-1
-                              if ( runsError )
+                              else
                                 return
-                            }
-
-                            if ( this.USE_FILTERS ) {
-                              for ( var i=0, l=this.filters.length; i<l; i++ )
-                                if ( !this.filters[i].test() )
-                                  filterError = true
-                              if ( filterError )
-                                return
-                            }
-
-                            if ( length == 1 ) {
+                            
+                            if ( length == 1 )
                               return handler.call(context)
-                            }
-                            if ( length == 2 )
+                            else if ( length == 2 )
                               return handler.call(context, args[1])
-                            if ( length == 3 )
+                            else if ( length == 3 )
                               return handler.call(context, args[1], args[2])
-                            if ( length == 4 )
+                            else if ( length == 4 )
                               return handler.call(context, args[1], args[2], args[3])
                             for ( var i=1, arr=[], l=length; i<l; i++ )
                                 arr.push(args[i])
@@ -275,9 +260,9 @@
                 _construct : function(){
                     this._eeEvents = {}
                 }
-              , on: function(eventName, eventCallback, eventParams){
+              , on: function(eventName, eventCallback, eventRuns){
                     this._eeEvents[eventName] = this._eeEvents[eventName] || []
-                    this._eeEvents[eventName].push(new EventHandler(eventCallback, eventParams, this))
+                    this._eeEvents[eventName].push(new EventHandler(eventCallback, eventRuns, this))
                     return this
                 }
               , once: function(eventName, eventCallback){
