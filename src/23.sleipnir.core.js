@@ -164,7 +164,7 @@
         * A function that makes it easy to create classes and manage inheritance
         * @name sleipnir.core.klass
         */
-      , klass = core.klass = (function klass(_){
+      , klass = core.klass = (function(_){
             return function(Ancestor, properties, singleton){
                 var args = _.to.array(arguments)
                   , singleton = false, properties, Ancestor, Heir
