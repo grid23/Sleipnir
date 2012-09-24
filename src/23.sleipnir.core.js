@@ -34,7 +34,7 @@
       , dom = ns.dom = {}
       , env = ns.env = {}
 
-      , version = ns.version = "0.2.5a01"
+      , version = ns.version = "0.2.5a02"
 
       , _ = ns.utils = (function(){
             var slice = Array.prototype.slice
@@ -680,6 +680,7 @@
                             })
                         }
                       , status: 0
+                      , data: null
                       , test: function(){
                             var val = env.url.get(this.get('type'))
                               , match = val.match(this.get('path'))
@@ -710,8 +711,9 @@
               , on: function(){
                     var args = _.to.array(arguments)
                       , eventName = args.shift()
-                      , match = eventName.match(/routes\.([^\.]*)\.(?:enter|exit)/)
+                      , match = eventName.match(/routes\.([^\.]*)\.(enter|exit)/)
                       , name = match && match[1] || eventName
+                      , action = match && match[2] || null 
                       , wait = _.is.boolean( args[args.length-1] ) && !args.pop() || true
                       , handler = _.is.fn( args[args.length-1] ) && args.pop() || noop
                       , dependencies = args
@@ -721,22 +723,28 @@
                       return EventEmitter.prototype.on.apply(this, arguments), this
                     
                     EventEmitter.prototype.on.call(this, eventName, function(matches){
-                        if ( dependencies.length )
-                          new ResourceLoader(dependencies).then(function(data){
-                              var data = data || {}
-                              data.matches = matches
-                              sleipnir(function(err, _){
-                                  handler(err, _, data)
-                              }, wait)
-                          }).or(function(){
-                              handler(new Error('sleipnir: error loading one of the requested resources'), _)
-                          })
+                        
+                        route = route || route[name] // should exist now
+                        
+                        if ( action === "enter" && !route) {
+                          if ( dependencies.length )
+                            new ResourceLoader(dependencies).then(function(data){
+                                route.data = data
+                                sleipnir(function(err, _){
+                                    handler(err, _, data, matches)
+                                }, wait)
+                            }).or(function(){
+                                handler(new Error('sleipnir: error loading one of the requested resources'), _)
+                            })
+                          else
+                            sleipnir(function(err, _, data){
+                                handler(err, _, data, matches)
+                            }, wait)
+                        }
                         else
                           sleipnir(function(err, _, data){
-                              var data = data || {}
-                              data.matches = matches
-                              handler(err, _, data)
-                          }, wait)
+                              handler(err, _, route.data, matches)
+                          })
                     })
                     
                     if ( route )
