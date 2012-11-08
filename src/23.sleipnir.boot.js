@@ -12,7 +12,7 @@
     for ( var i=0, l=_p.length; i<l; i++ )
       if ( _p[i].src.match(/23.sleipnir.boot.js/) )
         p = _p[i],
-        src = p.getAttribute('data-core') || src
+        src = p.dataset.core || src
     if ( !p )
       p = _p[0]
     s.async = true
