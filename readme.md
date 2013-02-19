@@ -16,7 +16,7 @@ Sleipnir is a toolbox library to help you build your own MVC framework, and prov
 - MVC base mechanisms ( Model, and Collection )
 - an abstract Router class, that can do a lot, lot more than just routing urls
 - adaptation of some ES6 sweetness
-- no DOM purposes (*"do it your own way"*)
+- no DOM purposes (*do it your own way*)
 
 ## call for arms
 There's a lot of work to be done. And things to be changed. *you. can. help.*
