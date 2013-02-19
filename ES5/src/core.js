@@ -1,12 +1,3 @@
-/*
-  changelog:
-  0.5.1
-    - singleton now accept arguments for its constructor, and a return value
-    - IteratorSafe + change from Iterator(x, noop) -> IteratorSafe(x) in methods
-    - Promises are now propagating
-    - Promise.Sequence | Promise.sequence
-*/
-
 (function(root){ "use strict"
     
     var 

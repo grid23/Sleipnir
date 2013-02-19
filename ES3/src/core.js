@@ -1,13 +1,3 @@
-/*
-  changelog:
-  0.5.3
-    - singleton now accept arguments for its constructor and a return value
-    - Model.length() | Collection.length()
-    - IteratorSafe + change from Iterator(x, noop) -> IteratorSafe(x) in methods
-    - Promises are now propagating
-    - Promise.Sequence | Promise.sequence
-*/
-
 (function(root){ "use strict"
     var ns = {}
       , version = ns.version = "ES3-0.5.3"
