@@ -14,8 +14,8 @@ Sleipnir is a toolbox library to help you build your own MVC framework, and prov
 - simple and efficient way to manage classes and OOP in JavaScript
 - event-driven development made easy
 - MVC base mechanisms ( Model, and Collection )
-- an abstract Router class, that can do a lot, lot more than just routing url
-- no DOM purposes ("do it your own way")
+- an abstract Router class, that can do a lot, lot more than just routing urls
+- no DOM purposes (*"do it your own way"*)
 
 ## license
 
