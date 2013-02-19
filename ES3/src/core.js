@@ -138,24 +138,27 @@
 
       , singleton = ns.singleton = function(){
             var C, F, fn, instance, output
-
+            
             C = invoke(klass, arguments, null)
-
-            return function(){
+            
+            fn = function(){
                 var args = arguments
-
+                
                 if ( instance )
                   return output
-
+                
                 F = function(){
                     instance = this
                     output = invoke(C, args, this)
                     return output
                 }
                 F.prototype = C.prototype
-
+                
                 return new F
             }
+            
+            fn.create = C.create
+            return fn
         }
 
       , errors = ns.errors = {

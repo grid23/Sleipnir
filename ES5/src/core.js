@@ -86,7 +86,7 @@
             
             C = invoke(klass, arguments, null)
             
-            return function(){
+            fn = function(){
                 var args = arguments
                 
                 if ( instance )
@@ -101,6 +101,9 @@
                 
                 return new F
             }
+            
+            fn.create = C.create
+            return fn
         }
       
       , errors = ns.errors = {
