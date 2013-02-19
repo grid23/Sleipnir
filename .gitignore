@@ -1,5 +1,6 @@
 *.DS_STORE
 *.svn
+0.4.0
 svn/*
 tmp/*
 game/*
