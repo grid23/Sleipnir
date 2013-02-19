@@ -7,7 +7,7 @@
 
 ## What is sleipnir?
 
-Imagine Backbone or any like-minded MVC framework as that nice knitted pull your grand-mother offered you last christmas: a nice looking green pull with a cool deer drawing on the front side. Sleipnir is actually the same pull, turned inside out — you can see the raw fabric and sewing work.
+Imagine Backbone or any like-minded MVC framework as that nice knitted pullover your grandmother made for you last year: a nice looking green pullover with a cute deer on the front-side. Sleipnir is actually the same stuff, turned inside out — you can see the raw fabric and sewing work.
 Sleipnir is a toolbox library to help you build your own MVC framework, and provides core concepts and mechanisms on which you can build upon: we're not forcing you to adapt to one paradigm, we're enabling you to build your own.
 
 ## key points
