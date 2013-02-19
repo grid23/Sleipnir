@@ -157,7 +157,9 @@
                 return new F
             }
             
-            fn.create = C.create
+            fn.create = function(){
+                return invoke(fn, arguments)
+            }
             return fn
         }
 
@@ -952,5 +954,15 @@
             }
         })
     
-    root.sleipnir = ns
+    root.sleipnir = function(a){
+        if ( typeof a === "function" )
+          return invoke(a, [ns])
+        if ( ns.hasOwnProperty(a) )
+          return ns[a]
+    }
+    
+    ;(function(sleipnir){
+        for ( var k in ns ) if ( ns.hasOwnProperty(k) )
+          sleipnir[k] = ns[k]
+    }(root.sleipnir))
 }(this))
