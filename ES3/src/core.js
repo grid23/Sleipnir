@@ -1,6 +1,6 @@
 (function(root){ "use strict"
     var ns = {}
-      , version = ns.version = "ES3-0.5.3"
+      , version = ns.version = "ES3-0.5.4"
 
       , noop = function(){}
         
@@ -607,7 +607,7 @@
 
                   return route
               }
-            , enum: function(){
+            , enumerate: function(){
                   var data = this._routes || {}
                     , copy = {}
                     , iterator = new IteratorSafe(data), ite
@@ -745,7 +745,7 @@
 
                 return hits
             }
-          , enum: function(){
+          , enumerate: function(){
                 var data = this._data || {}
                   , copy = {}
                   , iterator = new IteratorSafe(data), ite
@@ -939,7 +939,7 @@
 
                 return hits
             }
-          , enum: function(){
+          , enumerate: function(){
               var data = this._models || []
                 , copy = {}
                 , iterator = new IteratorSafe(data), ite

@@ -3,7 +3,7 @@
 ## current version
 *Sleipnir comes in two versions. The first and main version is heavily based on meta-programming enabled by ES5 (IE9+), but we do also provide an ES3 (IE8-) version.*
 - ES5: 0.5.1
-- ES3: 0.5.3
+- ES3: 0.5.4
 
 ## what is sleipnir?
 
