@@ -2,7 +2,7 @@
     
     var 
         ns = {}
-      , version = ns.version = "ES5-0.5.1"
+      , version = ns.version = "ES5-0.5.2"
       
       , noop = function(){}
       
@@ -380,6 +380,7 @@
                             _promises: { value: [] }
                           , _yield: { configurable: true, value: [] }
                           , _state: { configurable: true, value: -1 }
+                          , _closed: { configurable: true, value: 0 }
                         })
                         
                         if ( !arguments.length )
@@ -403,12 +404,20 @@
                                     self.reject(prom)
                                 })
                             }(promises[i], i))
+                        
+                        Object.defineProperty(this, "_closed", { configurable: false, value: 1 })
                     }
                     
                   , progress: {
                         value: function(prom, data){
-                            var promises = this._promises || []
+                            var self = this, args
+                              , promises = this._promises || []
                               , i, l, inprogress = 0
+                            
+                            if ( !this._closed )
+                              return args = slice(arguments), setTimeout(function(){
+                                  invoke(Group.prototype.progress, args, self)
+                              }, 0)
                             
                             for ( i = 0, l = promises.length; i<l; i++)
                               switch ( promises[i].status ) {

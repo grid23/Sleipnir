@@ -1,6 +1,6 @@
 (function(root){ "use strict"
     var ns = {}
-      , version = ns.version = "ES3-0.5.4"
+      , version = ns.version = "ES3-0.5.5"
 
       , noop = function(){}
         
@@ -377,7 +377,8 @@
                         this._promises = []
                         this._yield = []
                         this._state = -1
-
+                        this._closed = 0
+                        
                         if ( !arguments.length )
                           return this.reject(null)
                         else if ( arguments.length == 1)
@@ -399,11 +400,19 @@
                                     self.reject(prom)
                                 })
                             }(promises[i], i))
+                          
+                        this._closed = 1
                     }
                   , progress: function(prom, data){
-                        var promises = this._promises || []
+                        var self = this, args 
+                          , promises = this._promises || []
                           , i, l, inprogress = 0
-
+                        
+                        if ( !this._closed )
+                          return args = slice(arguments), setTimeout(function(){
+                              invoke(Group.prototype.progress, args, self)
+                          }, 0)
+                        
                         for ( i = 0, l = promises.length; i<l; i++)
                           switch ( promises[i].status() ) {
                               case -1:
