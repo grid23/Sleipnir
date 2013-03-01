@@ -1,6 +1,6 @@
 (function(root){ "use strict"
     var ns = {}
-      , version = ns.version = "ES3-0.5.5"
+      , version = ns.version = "ES3-0.5.6"
 
       , noop = function(){}
         
@@ -54,23 +54,27 @@
 
             return str.join("&").replace(/%20/g, "+")
         }
-      , objectify = ns.objectify = function(str){
-            var o = {}
-              , pairs = str.split(/&amp;|&/g)
-              , iterator = new IteratorSafe(pairs), ite
-
-            while ( ite = iterator.next() )
-              (function(pair, o){
-                  var pair = decodeURIComponent(pair.replace(/\+/g, "%20")) 
-                    , idx = pair.indexOf("=")
-                    , key = pair.split("=", 1)
-                    , value = pair.slice(idx+1)
-
-                  o[key] = value
-              }(ite[1], o))
-
-            return o
-        }
+      , objectify = ns.objectify = (function(){
+            var ramp = /&amp;|&/g
+            
+            return function(str){
+                var o = {}
+                  , pairs = !!~ str.search(ramp) ? str.split(ramp) : []
+                  , iterator = new IteratorSafe(pairs), ite
+                
+                while ( ite = iterator.next() )
+                  (function(pair, o){
+                      var pair = decodeURIComponent(pair.replace(/\+/g, "%20")) 
+                        , idx = pair.indexOf("=")
+                        , key = pair.split("=", 1)
+                        , value = pair.slice(idx+1)
+                      
+                      o[key] = value
+                  }(ite[1], o))
+                
+                return o
+            }
+        }())
 
       , invoke = ns.invoke = function(fn, args, ctx){
             if ( typeof fn != "function" )
@@ -519,6 +523,10 @@
                 current = this._current = this._range[next]
                 return current
             }
+            
+          , enumerate: function(){
+                return [].concat(this._range || [])
+            }
         })
 
       , IteratorSafe = ns.IteratorSafe = klass(Iterator, function(Super){
@@ -616,7 +624,7 @@
 
                   return route
               }
-            , enumerate: function(){
+            , routes: function(){
                   var data = this._routes || {}
                     , copy = {}
                     , iterator = new IteratorSafe(data), ite
