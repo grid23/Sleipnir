@@ -1,27 +1,27 @@
 (function(root){ "use strict"
     
     var 
-        ns = {}
-      , version = ns.version = "ES5-0.5.2"
+        sleipnir = {}
+      , version = sleipnir.version = "ES5-0.5.4"
       
       , noop = function(){}
       
-      , toString = ns.toType = (function(){
+      , toString = sleipnir.toType = (function(){
             var toString = Object.prototype.toString
             
             return function(o){
                 return toString.call(o)
             }
         }())
-      , isArray = ns.isArray = Array.isArray || function(o){ return toString(o) === "[object Array]" }
-      , slice = ns.slice = (function(){ 
+      , isArray = sleipnir.isArray = Array.isArray || function(o){ return toString(o) === "[object Array]" }
+      , slice = sleipnir.slice = (function(){ 
             var slice = Array.prototype.slice
             return function(o, i){
                 return slice.call(o, i)
             }
         }())
         
-      , invoke = ns.invoke = function(fn, args, ctx){
+      , invoke = sleipnir.invoke = function(fn, args, ctx){
             if ( typeof fn != "function" )
               throw new TypeError("argument 0 must be a valid function")
             
@@ -42,7 +42,7 @@
             }
         }
       
-      , klass = ns.class = function(){
+      , klass = sleipnir.class = function(){
             var SuperClass = arguments.length == 2 ? arguments[0] : null
               , superPrototype = SuperClass ? SuperClass.prototype : {}
         
@@ -64,8 +64,15 @@
                 , constructor: { value: Class }
               })
               
-              Class.create = function(){
-                  var args = arguments
+              Class.create = function(fn){
+                  var args, scope
+                  
+                  if ( typeof fn == "function" && fn.name === "scope" )
+                    scope = fn(),
+                    args = isArray(scope) ? scope : [scope]
+                  else
+                    args = arguments
+                  
                   function F(){
                       return invoke(Class, args, this)
                   }
@@ -81,7 +88,7 @@
             return Class
         }
         
-      , singleton = ns.singleton = function(){
+      , singleton = sleipnir.singleton = function(){
             var C, F, fn, instance, output
             
             C = invoke(klass, arguments, null)
@@ -108,7 +115,7 @@
             return fn
         }
       
-      , errors = ns.errors = {
+      , errors = {
             StopIterationError: klass(Error, {
                 constructor: function(message){
                     this.name = "StopIteration"
@@ -117,7 +124,7 @@
             })
         }
       
-      , EventEmitter = ns.EventEmitter = klass(function(){
+      , EventEmitter = sleipnir.EventEmitter = klass(function(){
             
             function Pipe(prefix, emitter){
                 this.prefix = prefix + ":"
@@ -265,7 +272,7 @@
             }
         })
       
-      , Promise = ns.Promise = (function(){
+      , Promise = sleipnir.Promise = (function(){
             
             var 
                 Promise = klass(EventEmitter, {
@@ -480,7 +487,7 @@
             return Promise
         }())
       
-      , Iterator = ns.Iterator = klass(EventEmitter, {
+      , Iterator = sleipnir.Iterator = klass(EventEmitter, {
             constructor: function(range, opt_keys, opt_onstopiteration){
                 if ( !range )
                   return this.emit('error', new TypeError('missing arguments 0 when constructing new Iterator object'))
@@ -534,13 +541,7 @@
             
           , enum: {
                 get: function(){
-                    var range = this._range || [], o = {}
-                      , iterator = new IteratorSafe(range), ite
-                    
-                    while ( ite = iterator.next() )
-                      o[ ite[1][0] ] = ite[1][1]
-                    
-                    return o
+                    return [].concat(this._range || [])
                 }
             }
           , length: {
@@ -561,7 +562,7 @@
             }
         })
       
-      , IteratorSafe = ns.IteratorSafe = klass(Iterator, function(Super){
+      , IteratorSafe = sleipnir.IteratorSafe = klass(Iterator, function(Super){
             return {
                 constructor: function(){
                     invoke(Super, arguments, this)
@@ -574,7 +575,7 @@
             }
         })
       
-      , Router = ns.Router = klass(EventEmitter, {
+      , Router = sleipnir.Router = klass(EventEmitter, {
             constructor: function(routes, dispatcher){
                 var dispatcher = typeof arguments[arguments.length-1] == "function" ? arguments[arguments.length-1] : function(){ return false }
                   , routes = arguments[0] && arguments[0].constructor == Object ? arguments[0] : null
@@ -675,7 +676,7 @@
             }
         })
       
-      , Model = ns.Model = klass(EventEmitter, {
+      , Model = sleipnir.Model = klass(EventEmitter, {
             constructor: function(){
                 if ( arguments.length )
                   invoke(Model.prototype.set, arguments, this)
@@ -844,7 +845,7 @@
             }
         })
       
-      , Collection = ns.Collection = klass(EventEmitter, {
+      , Collection = sleipnir.Collection = klass(EventEmitter, {
             constructor: function(){
                 if ( arguments.length )
                   invoke(Collection.prototype.add, arguments, this)
@@ -1054,16 +1055,26 @@
             }
         })
     
-    root.sleipnir = function(a){
-        if ( typeof a === "function" )
-          return invoke(a, [ns])
-        if ( ns.hasOwnProperty(a) )
-          return ns[a]
-    }
+    Object.defineProperty(root, "namespace", { enumerable: true, value: (function(){
+        var ctx = root
+        
+        return function(name, scope){
+            var pctx = ctx
+            
+            if ( typeof name != "string" || typeof scope != "function" )
+              throw new Error("invalid argument(s)")
+            
+            ctx = Object.create(null, { toString: { value: function(){ return "namespace" } } })
+            scope.call(null, function define(key, value){ return Object.defineProperty(ctx, key, { enumerable: true, value: value })[key] }, sleipnir)
+            Object.defineProperty(pctx, name, { enumerable: true, value: ctx })
+            ctx = pctx
+        }
+    }()) })
     
-    ;(function(sleipnir){
-        var k, i, l
-        for ( k = Object.keys(ns), i = 0, l = k.length; i<l; i++ )
-          sleipnir[k[i]] = ns[k[i]]
-    }(root.sleipnir))
+    
+    namespace("sleipnir", function(def){
+        for ( var k in sleipnir )
+          def(k, sleipnir[k])
+    }) 
 }(window))
+
