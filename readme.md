@@ -1,12 +1,8 @@
 # sleipnirJS 0.5.*
 
 ## current version
-<<<<<<< HEAD
 *Sleipnir comes in three versions. The first and main version is heavily based on meta-programming enabled by ES5 (IE9+), but we do also provide an ES3 (IE8-) version. An ES6 version is also presented as an experiment and exploration (only working on Firefox as for now).*
-=======
-*Sleipnir comes in three versions. The first and main version is heavily based on meta-programming enabled by ES5 (IE9+), but we do also provide an ES3 (IE8-) version. An ES6 version is also presented, as an experiment and exploration (only working on Firefox as for now).*
 - ES6: 0.5.alpha
->>>>>>> readme
 - ES5: 0.5.1
 - ES3: 0.5.4
 
