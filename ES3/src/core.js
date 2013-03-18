@@ -1,6 +1,6 @@
 (function(root){ "use strict"
     var ns = {}
-      , version = ns.version = "ES3-0.5.6"
+      , version = ns.version = "ES3-0.5.7"
 
       , noop = function(){}
         
@@ -46,11 +46,11 @@
 
       , serialize = ns.serialize = function(){
             var args = arguments.length > 1 && arguments || arguments[0]
-              , iterator = new IteratorSafe(args), ite
+              , iterator = new Iterator(args), ite, i
               , str = []
 
-            while ( ite = iterator.next() )
-              str.push( encodeURIComponent(ite[0]) +"="+ encodeURIComponent(ite[1]) )
+            for ( i in ite = iterator.enumerate() )
+              str.push( encodeURIComponent(ite[i][0]) +"="+ encodeURIComponent(ite[i][1]) )
 
             return str.join("&").replace(/%20/g, "+")
         }
@@ -60,9 +60,9 @@
             return function(str){
                 var o = {}
                   , pairs = !!~ str.search(ramp) ? str.split(ramp) : []
-                  , iterator = new IteratorSafe(pairs), ite
+                  , iterator = new Iterator(pairs), ite, i
                 
-                while ( ite = iterator.next() )
+                for ( i in ite = iterator.enumerate() )
                   (function(pair, o){
                       var pair = decodeURIComponent(pair.replace(/\+/g, "%20")) 
                         , idx = pair.indexOf("=")
@@ -70,7 +70,7 @@
                         , value = pair.slice(idx+1)
                       
                       o[key] = value
-                  }(ite[1], o))
+                  }(ite[i][1], o))
                 
                 return o
             }
@@ -192,95 +192,106 @@
                       , listeners = events[type], _arr
                       , args = arguments.length > 1 ? slice(arguments, 1) : []
                       , i, l
-
+                    
                     if ( typeof type != "string" )
                       return this.emit('error', new TypeError("invalid argument 0"))
-
+                    
                     if ( type == "error" && !listeners )
                         if ( arguments[1] instanceof Error || arguments[1]._isError )
                           throw arguments[1]
                         else
                           throw new Error( arguments[1] )
-
+                    
                     if ( listeners )
-                      if ( typeof listeners == "function" )
+                      if ( typeof listeners.handleEvent == "function" )
+                        invoke(listeners.handleEvent, args, listeners)
+                      else if ( typeof listeners == "function" )
                         invoke(listeners, args)
                       else {
                         _arr = [].concat(listeners) //copy array to prevent manipulation of the listeners during the loop
                         for ( i = 0, l = _arr.length; i<l; i++ )
-                          invoke(_arr[i], args)
+                          if ( typeof _arr[i].handleEvent == "function" )
+                            invoke(_arr[i].handleEvent, args, _arr[i])
+                          else
+                            invoke(_arr[i], args)
                       }
+                    
                     for ( i = 0, l = pipes.length; i<l; i++ )
                       invoke(EventEmitter.prototype.emit, [pipes[i].prefix+type].concat(args), pipes[i].emitter)
-
+                    
                     return this
                 }
-
+                
               , on: function(type, fn){
                     var events = this._events = this._events || {}
                       , listeners = events[type]
-
-                    if ( !fn || typeof fn != "function" )
+                    
+                    if ( !fn || (typeof fn != "function" && typeof fn.handleEvent != "function") )
                       return this.emit('error', new TypeError("invalid argument 1"))
-
-                    if ( !listeners )
+                    
+                    if ( !listeners || listeners === Object.prototype[type] )
                       events[type] = fn
-                    else if ( typeof listeners == "function" )
+                    else if ( typeof listeners == "function" || typeof listeners.handleEvent == "function" )
                       events[type] = [events[type], fn]
                     else
                       listeners.push(fn)
-
+                    
                     return this
                 }
               , once: function(type, fn){
                     var self = this, _f
-
-                    if ( !fn || typeof fn != "function" )
-                      return this.emit('error', new TypeError("missing/bad arguments[1]"))
-
+                    
+                    if ( !fn || (typeof fn != "function" && typeof fn.handleEvent != "function") )
+                        return this.emit('error', new TypeError("missing/bad arguments[1]"))
+                    
                     _f = function(){
-                        invoke(fn, arguments, null)
+                        var _fn, _ctx
+                        
+                        if ( typeof fn.handleEvent == "function" )
+                          _fn = fn.handleEvent, _ctx = fn
+                        else
+                          _fn = fn, _ctx = null
+                        
+                        invoke(_fn, arguments, _ctx)
                         self.off(type, _f) 
                     }
-
+                    
                     return this.on(type, _f)
                 }
               , off: function(type, fn){
                     var events = this._events = this._events || {}
                           , listeners = events[type]
                           , idx
-
+                        
                         if ( !type || typeof type != "string" )
                           return this.emit('error', new TypeError("invalid argument 0") )
-
-                        if ( typeof fn == "function" && !!listeners )
-                          if ( listeners == fn )
-                            delete events[type]
-                          else {
-                            while ( idx = indexOf(listeners, fn), !!~idx )
-                              events[type].splice(idx, 1)
-
-                            if ( !events[type].length )
-                              delete events[type]
-                          }
-
-                        if ( fn == "*" )
+                        
+                        if ( fn === "*" || !fn )
                           delete events[type]
-
+                          
+                        if ( typeof fn == "function")
+                          if ( listeners )
+                            if ( listeners === fn )
+                              delete events[type]
+                            else {
+                              while ( idx = listeners.indexOf(fn), !!~idx )
+                                events[type].splice(idx, 1)
+                              
+                              if ( !events[type].length )
+                                delete events[type]
+                            }
+                        
                         return this
                 }
-
+              
               , listeners: function(type){
                     var events = this._events = this._events || {}
                     , listeners = events[type]
-
-                    if ( !listeners )
-                      return []
-
-                    if ( typeof listeners == "function" )
-                      return [listeners]
-
-                    return listeners
+                    
+                    if ( isArray(listeners) )
+                      return listeners
+                    
+                    return !!listeners ? [listeners] : []
                 }
 
               , pipe: function(prefix, emitter){
@@ -296,7 +307,7 @@
 
                     return this
                 }
-              , unpipe: function(prefix, emitter){} //TODO
+              //, unpipe: function(prefix, emitter){} //TODO
             }
         })
 
@@ -437,18 +448,18 @@
 
               , Sequence = klass(Promise, {
                     constructor: function(){
-                        var promises = isArray(arguments[0]) ? arguments[0] : slice(arguments)
-                          , main, output, iterator, ite
+                        var callbacks = isArray(arguments[0]) ? arguments[0] : slice(arguments)
+                          , main, output, iterator, ite, i
 
                         main = output = new Promise
 
-                        iterator = new IteratorSafe(promises)
+                        iterator = new Iterator(callbacks)
 
-                        while ( ite = iterator.next() )
-                          if ( typeof ite[1] != "function" )
+                        for ( i in ite = iterator.enumerate() )
+                          if ( typeof ite[i][1] != "function" )
                             this.emit("error", new TypeError("invalid argument"))
                           else
-                            output = output.then(ite[1])
+                            output = output.then(ite[i][1])
 
                         return main
                     }
@@ -476,13 +487,12 @@
         }())
 
       , Iterator = ns.Iterator = klass(EventEmitter, {
-            constructor: function(range, opt_keys, opt_onstopiteration){
+            constructor: function(range, opt_keys){
                 if ( !range )
                   return this.emit('error', new TypeError('missing arguments 0 when constructing new Iterator object'))
 
                 var self = this
-                  , opt_onstopiteration = typeof arguments[arguments.length-1] == "function" ? arguments[arguments.length-1] : null
-                  , opt_keys = typeof arguments[1] != "function" ? !!arguments[1] : false
+                  , opt_keys = !!arguments[1]
                   , keys, i, l
 
                 try { keys = enumerate(range) }
@@ -498,9 +508,6 @@
                 for ( i = 0, l = keys.length; i<l; i++ )
                   this._range.length += 1,
                   this._range[i] = opt_keys ? [ keys[i] ] : [ keys[i], range[keys[i]] ]
-
-                if ( opt_onstopiteration )
-                  this.onstopiteration = opt_onstopiteration
             }
           , _isIterator: true
 
@@ -526,17 +533,6 @@
             
           , enumerate: function(){
                 return [].concat(this._range || [])
-            }
-        })
-
-      , IteratorSafe = ns.IteratorSafe = klass(Iterator, function(Super){
-            return {
-                constructor: function(){
-                    invoke(Super, arguments, this)
-                }
-              , onstopiteration: function(){
-                    invoke(this.emit, ["stopiteration"].concat(arguments), this)
-                }
             }
         })
 
@@ -607,7 +603,7 @@
                   if ( typeof handler != "function" )
                     this.emit('error', new TypeError("argument 1 is expected to be a function"))
 
-                  if ( this._routes[rule] == undefined )
+                  if ( !this._routes[rule] || this._routes[rule] === Object.prototype[rule] )
                     this._routes[rule] = handler
                   else if ( typeof this._routes[rule] == "function" )
                     this._routes[rule] = [this._routes[rule], handler]
@@ -627,10 +623,10 @@
             , routes: function(){
                   var data = this._routes || {}
                     , copy = {}
-                    , iterator = new IteratorSafe(data), ite
+                    , iterator = new Iterator(data), ite, i
 
-                  while (ite = iterator.next())
-                    copy[ite[0]] = this.route(ite[0])
+                  for ( i in ite = iterator.enumerate() )
+                    copy[ite[i][0]] = this.route(ite[i][0])
 
                   return copy
               }
@@ -668,7 +664,7 @@
                   value = invoke(hook, [value], this)
 
                 if ( isArray(value) )
-                  value = [].concat(value)
+                  value = JSON.parse(JSON.stringify(value))
 
                 if ( !data.hasOwnProperty(key) )
                   this.emit("add>"+key, value),
@@ -683,13 +679,11 @@
             }
           , _fromHash: function(hash, root){
                 var self = this
-                  , iterator = new IteratorSafe(hash), iteration //ignore stopIteration errors completly
+                  , iterator = new Iterator(hash), ite, i
                   , root = !!root ? root+'.' : ""
 
-                while ( iteration = iterator.next() )
-                  (function(){
-                      self.set(root + iteration[0], iteration[1])
-                  }())
+                for ( i in ite = iterator.enumerate() )
+                  self.set(root + ite[i][0], ite[i][1])
 
                 return this
             }
@@ -711,10 +705,12 @@
 
                 if ( arguments.length == 1 && name && name.constructor == Object )
                   return (function(hash, self){
-                      var iterator = new IteratorSafe(hash), ite
+                      var iterator = new Iterator(hash), ite, i
 
-                      while (ite = iterator.next() )
-                        return self.hook(ite[0], ite[1])
+                      for ( i in ite = iterator.enumerate() )
+                        self.hook(ite[i][0], ite[i][1])
+                      
+                      return self
                   }(name, this))
 
                 hooks = this._hooks = this._hooks || {}
@@ -765,22 +761,18 @@
           , enumerate: function(){
                 var data = this._data || {}
                   , copy = {}
-                  , iterator = new IteratorSafe(data), ite
+                  , iterator = new Iterator(data), ite, i
 
-                while (ite = iterator.next())
-                  copy[ite[0]] = ite[1]
+                for ( i in ite = iterator.enumerate() )
+                  copy[ite[i][0]] = ite[i][1]
 
                 return copy
             }
           , length: function(){
                 var data = this._data || {}
-                  , iterator = new IteratorSafe(data, true)
-                  , l = 0
+                  , iterator = new Iterator(data, true)
 
-                while ( iterator.next() )
-                  l++
-
-                return l
+                return iterator.length
             }
           , serialize: function(){
                 return serialize( this._data || {} )
@@ -794,7 +786,7 @@
             }
           , _isCollection: true
           , _Model: Model
-          , Model: function(M){
+          , model: function(M){
                 if ( !M )
                   return this._Model
 
@@ -879,10 +871,9 @@
             }
 
           , find: function(){
-                var self = this
-                  , models = this._models || []
-                  , iterator = new IteratorSafe(models), ite
-                  , hits = [], hit, attributes = [], queries = [],  i, l
+                var models = this._models || []
+                  , iterator = new Iterator(models), ite, i
+                  , hits = [], hit, attributes = [], queries = [], l
 
 
                   if ( !arguments.length )
@@ -898,15 +889,13 @@
 
                   for ( i = 0, l = attributes.length; i<l; i++ )
                     (function(attr){
-                        var iterator = new IteratorSafe(attr), ite
+                        var iterator = new Iterator(attr), ite, i
 
-                        iterator.on('error', function(err){ self.emit('error', err)})
-
-                        while ( ite = iterator.next() )
-                          queries.push(ite)
+                        for ( i in ite = iterator.enumerate() )
+                          queries.push(ite[i])
                     }(attributes[i]))
 
-                  while ( ite = iterator.next() ) {
+                  for ( i in ite = iterator.enumerate() ) {
                       hit = (function(model){
                                 var i, l, key, value, hit
 
@@ -919,10 +908,10 @@
                                       return false
                                 }
                                 return true
-                            }(ite[1]))
+                            }(ite[i][1]))
 
                       if ( hit )
-                        hits.push(ite[1])
+                        hits.push(ite[i][1])
                   }
 
                   return hits
@@ -939,30 +928,30 @@
 
           , set: function(){
                 var models = this._models || []
-                  , iterator = new IteratorSafe(models), iteration
+                  , iterator = new Iterator(models), ite, i
 
-                while ( iteration = iterator.next() )
-                  invoke(Model.prototype.set, arguments, iteration[1])
+                for ( i in ite = iterator.enumerate() )
+                  invoke(Model.prototype.set, arguments, ite[i][1])
 
                 return this
             }
           , get: function(){
                 var models = this._models || []
                   , hits = []
-                  , iterator = new IteratorSafe(models), iteration
+                  , iterator = new Iterator(models), ite, i
 
-                while ( iteration = iterator.next() )
-                  hits.push( invoke(Model.prototype.get, arguments, iteration[1]) )
+                for ( i in ite = iterator.enumerate() )
+                  hits.push( invoke(Model.prototype.get, arguments, ite[i][1]) )
 
                 return hits
             }
           , enumerate: function(){
               var data = this._models || []
                 , copy = {}
-                , iterator = new IteratorSafe(data), ite
+                , iterator = new Iterator(data), ite, i
 
-              while (ite = iterator.next())
-                copy[ite[0]] = ite[1]
+              for ( i in ite = iterator.enumerate() )
+                copy[ite[i][0]] = ite[i][1]
 
               return copy
           }

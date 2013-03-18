@@ -1,8 +1,7 @@
 (function(root){ "use strict"
-    
     var 
         sleipnir = {}
-      , version = sleipnir.version = "ES5-0.5.4"
+      , version = sleipnir.version = "ES5-0.5.5"
       
       , noop = function(){}
       
@@ -150,12 +149,17 @@
                               throw new Error( arguments[1] )
                         
                         if ( listeners )
-                          if ( typeof listeners == "function" )
+                          if ( typeof listeners.handleEvent == "function")
+                            invoke(listeners.handleEvent, args, listeners)
+                          else if ( typeof listeners == "function" )
                             invoke(listeners, args)
                           else {
                             _arr = [].concat(listeners) //copy array to prevent manipulation of the listeners during the loop
                             for ( i = 0, l = _arr.length; i<l; i++ )
-                              invoke(_arr[i], args)
+                              if ( typeof _arr[i].handleEvent == "function" )
+                                invoke(_arr[i].hendleEvent, args, _arr[i])
+                              else
+                                invoke(_arr[i], args)
                           }
                         for ( i = 0, l = pipes.length; i<l; i++ )
                           invoke(EventEmitter.prototype.emit, [pipes[i].prefix+type].concat(args), pipes[i].emitter)
@@ -169,12 +173,12 @@
                         var events = this._events || Object.defineProperty(this, "_events", { value: {} })._events
                           , listeners = events[type]
                         
-                        if ( !fn || typeof fn != "function" )
+                        if ( !fn || (typeof fn != "function" && typeof fn.handleEvent != "function")  )
                           return this.emit('error', new TypeError("invalid argument 1"))
                         
-                        if ( !listeners )
+                        if ( !listeners || listeners === Object.prototype[type] )
                           events[type] = fn
-                        else if ( typeof listeners == "function" )
+                        else if ( typeof listeners == "function" || typeof listeners.handleEvent == "function" )
                           events[type] = [events[type], fn]
                         else
                           listeners.push(fn)
@@ -186,11 +190,18 @@
                     value: function(type, fn){
                         var self = this, _f
                         
-                        if ( !fn || typeof fn != "function" )
+                        if ( !fn || (typeof fn != "function" && typeof fn.handleEvent != "function") )
                           return this.emit('error', new TypeError("missing/bad arguments[1]"))
                         
                         _f = function(){
-                            invoke(fn, arguments, null)
+                            var _fn, _ctx
+                            
+                            if ( typeof fn.handleEvent == "function" )
+                              _fn = fn.handleEvent, _ctx = fn
+                            else
+                              _fn = fn, _ctx = null
+                            
+                            invoke(_fn, arguments, _ctx)
                             self.off(type, _f) 
                         }
                         
@@ -207,19 +218,20 @@
                         if ( !type || typeof type != "string" )
                           return this.emit('error', new TypeError("invalid argument 0") )
                         
-                        if ( typeof fn == "function" && !!listeners )
-                          if ( listeners == fn )
-                            delete events[type]
-                          else {
-                            while ( idx = listeners.indexOf(fn), !!~idx )
-                              events[type].splice(idx, 1)
-                            
-                            if ( !events[type].length )
-                              delete events[type]
-                          }
-                        
-                        if ( fn == "*" )
+                        if ( fn === "*" || !fn )
                           delete events[type]
+                          
+                        if ( typeof fn == "function")
+                          if ( listeners )
+                            if ( listeners === fn )
+                              delete events[type]
+                            else {
+                              while ( idx = indexOf(listeners, fn), !!~idx )
+                                events[type].splice(idx, 1)
+                              
+                              if ( !events[type].length )
+                                delete events[type]
+                            }
                         
                         return this
                     }
@@ -255,14 +267,14 @@
                         return this
                     }
                 }
-              , unpipe: {
+              /*, unpipe: {
                     value: function(prefix, emitter){
                         var pipes = this._pipes || Object.defineProperty(this, "_pipes", { value: [] })._pipes
                           , i = 0, l = pipes.length
                         
                         return this
                     }
-                }
+                }*/ //TODO
                 
               , toString: {
                     value: function(){
@@ -448,18 +460,18 @@
               , Sequence = klass(Promise, {
                     constructor: {
                         value: function(){
-                            var promises = isArray(arguments[0]) ? arguments[0] : slice(arguments)
-                              , main, output, iterator, ite
+                            var callbacks = isArray(arguments[0]) ? arguments[0] : slice(arguments)
+                              , main, output, iterator, ite, i
                             
                             main = output = new Promise
                             
-                            iterator = new Iterator(promises, noop)
+                            iterator = new Iterator(callbacks)
                             
-                            while ( ite = iterator.next() )
-                              if ( typeof ite[1] != "function" )
+                            for ( i in ite = iterator.enum)
+                              if ( typeof ite[i][1] != "function" )
                                 this.emit("error", new TypeError("invalid argument"))
                               else
-                                output = output.then(ite[1])
+                                output = output.then(ite[i][1])
                             
                             return main
                         }
@@ -487,14 +499,73 @@
             return Promise
         }())
       
+      , Invoker = sleipnir.Invoker = klass(function(){
+            var rargs = /^function(?:[^\(]*)\(([^\)]*)/
+            
+            return {
+                constructor: function(rules){
+                    if ( rules )
+                      this.rules(rules)
+                }
+              , rules: {
+                    value: function(rules){
+                        var ite, r
+                        Object.defineProperty(this, "_rules", { value: {} })
+                        
+                        if ( rules )
+                          for ( r in ite = new Iterator(rules).enum )
+                            this._rules[ite[r][0]] = ite[r][1]
+                        
+                        return this
+                    }
+                }
+              , apply: {
+                    value: function(fn, args, ctx){
+                        var rules = this._rules || {}
+                          , res, i, l, a, _a=0, v
+                          , args = slice(args || [])
+                        
+                        if ( typeof fn != "function" )
+                          this.emit("error", new TypeError("invalid argument 0, function expected"))
+                        
+                        if ( !isArray(args) )
+                          this.emit("error", new TypeError("invalid argument 1, arguments or array expected"))
+                        
+                        res = ([].concat(fn.toString().match(rargs))[1] || "").split(",")
+                        
+                        for ( i = 0, l = res.length; i < l; i++ )
+                          if ( a = res[i].trim(), v = rules[a], v )
+                            res[i] = v
+                          else
+                            res[i] = args[_a++] 
+                        
+                        for ( i = _a, l = args.length; i < l; i++)
+                          res.push(args[i])
+                        
+                        return invoke(fn, res, ctx)
+                    }
+                }
+              , construct: {
+                    value: function(fn, args){
+                        var invoker = this
+                        function F(){
+                            invoker.apply(fn, args, this)
+                        }
+                        F.prototype = fn.prototype
+                        
+                        return new F
+                    }
+                }
+            }
+        }())
+      
       , Iterator = sleipnir.Iterator = klass(EventEmitter, {
-            constructor: function(range, opt_keys, opt_onstopiteration){
+            constructor: function(range, opt_keys){
                 if ( !range )
                   return this.emit('error', new TypeError('missing arguments 0 when constructing new Iterator object'))
                 
                 var self = this
-                  , opt_onstopiteration = typeof arguments[arguments.length-1] == "function" ? arguments[arguments.length-1] : null
-                  , opt_keys = typeof arguments[1] != "function" ? !!arguments[1] : false
+                  , opt_keys = !!arguments[1]
                   , keys, i, l
                 
                 try { keys = Object.keys(range) }
@@ -512,9 +583,6 @@
                 for ( i = 0, l = keys.length; i<l; i++ )
                   this._range.length += 1,
                   this._range[i] = opt_keys ? [ keys[i] ] : [ keys[i], range[keys[i]] ]
-                
-                if ( opt_onstopiteration )
-                  this.onstopiteration = opt_onstopiteration
             }
             
           , onstopiteration: { writable: true, value: null }
@@ -558,19 +626,6 @@
           , toString: {
                 value: function(){
                     return "[object Iterator]"
-                }
-            }
-        })
-      
-      , IteratorSafe = sleipnir.IteratorSafe = klass(Iterator, function(Super){
-            return {
-                constructor: function(){
-                    invoke(Super, arguments, this)
-                }
-              , onstopiteration: {
-                    value: function(){
-                        invoke(EventEmitter.prototype.emit, ["stopiteration"].concat(arguments), this)
-                    }
                 }
             }
         })
@@ -648,7 +703,7 @@
                     if ( typeof handler != "function" )
                       this.emit('error', new TypeError("argument 1 is expected to be a function"))
                     
-                    if ( this._routes[rule] == undefined )
+                    if ( !this._routes[rule] || this._routes[rule] === Object.prototype[rule] )
                       this._routes[rule] = handler
                     else if ( typeof this._routes[rule] == "function" )
                       this._routes[rule] = [this._routes[rule], handler]
@@ -712,7 +767,7 @@
                       value = invoke(hook, [value], this)
                     
                     if ( isArray(value) )
-                      value = [].concat(value)
+                      value = JSON.parse(JSON.stringify(value))
                     
                     if ( !data.hasOwnProperty(key) )
                       this.emit("add>"+key, value),
@@ -729,13 +784,11 @@
           , _fromHash: {
                 value: function(hash, root){
                     var self = this
-                      , iterator = new IteratorSafe(hash), iteration //ignore stopIteration errors completly
+                      , iterator = new Iterator(hash), ite, i
                       , root = !!root ? root+'.' : ""
                     
-                    while ( iteration = iterator.next() )
-                      (function(){
-                          self.set(root + iteration[0], iteration[1])
-                      }())
+                    for ( i in ite = iterator.enum )
+                      self.set(root + ite[i][0], ite[i][1])
                     
                     return this
                 }
@@ -763,10 +816,12 @@
                     
                     if ( arguments.length == 1 && name && name.constructor == Object )
                       return (function(hash, self){
-                          var iterator = new IteratorSafe(hash), ite
+                          var iterator = new Iterator(hash), ite, i
                           
-                          while (ite = iterator.next() )
-                            return self.hook(ite[0], ite[1])
+                          for ( i in ite = iterator.enum )
+                            self.hook(ite[i][0], ite[i][1])
+                          
+                          return self
                       }(name, this))
                     
                     hooks = this._hooks || Object.defineProperty(this, "_hooks", { value: {} })._hooks
@@ -852,7 +907,7 @@
             }
             
           , _Model: { writable: true, value: Model }
-          , Model: {
+          , model: {
                 set: function(M){
                     if ( !( new M instanceof Model) )
                       this.emit('error', new TypeError('invalid model'))
@@ -941,10 +996,9 @@
             
           , find: {
                 value: function(){
-                    var self = this
-                      , models = this._models || []
-                      , iterator = new IteratorSafe(models), ite
-                      , hits = [], hit, attributes = [], queries = [],  i, l
+                    var models = this._models || []
+                      , iterator = new Iterator(models), ite, i
+                      , hits = [], hit, attributes = [], queries = [], l
                       
                       
                       if ( !arguments.length )
@@ -960,15 +1014,13 @@
                       
                       for ( i = 0, l = attributes.length; i<l; i++ )
                         (function(attr){
-                            var iterator = new IteratorSafe(attr), ite
+                            var iterator = new Iterator(attr), ite, i
                             
-                            iterator.on('error', function(err){ self.emit('error', err)})
-                            
-                            while ( ite = iterator.next() )
-                              queries.push(ite)
+                            for ( i in ite = iterator.enum )
+                              queries.push(ite[i])
                         }(attributes[i]))
                       
-                      while ( ite = iterator.next() ) {
+                      for ( i in ite = iterator.enum ) {
                           hit = (function(model){
                                     var i, l, key, value, hit
                                     
@@ -981,10 +1033,10 @@
                                           return false
                                     }
                                     return true
-                                }(ite[1]))
+                                }(ite[i][1]))
                           
                           if ( hit )
-                            hits.push(ite[1])
+                            hits.push(ite[i][1])
                       }
                       
                       return hits
@@ -1007,10 +1059,10 @@
           , set: {
                 value: function(){
                     var models = this._models || []
-                      , iterator = new IteratorSafe(models), iteration
+                      , iterator = new Iterator(models), ite, i
                     
-                    while ( iteration = iterator.next() )
-                      invoke(Model.prototype.set, arguments, iteration[1])
+                    for ( i in ite = iterator.enum )
+                      invoke(Model.prototype.set, arguments, ite[i][1])
                     
                     return this
                 }
@@ -1020,10 +1072,10 @@
                 value: function(){
                     var models = this._models || []
                       , hits = []
-                      , iterator = new IteratorSafe(models), iteration
+                      , iterator = new Iterator(models), ite, i
                     
-                    while ( iteration = iterator.next() )
-                      hits.push( invoke(Model.prototype.get, arguments, iteration[1]) )
+                    for ( i in ite = iterator.enum )
+                      hits.push( invoke(Model.prototype.get, arguments, ite[i][1]) )
                     
                     return hits
                 }
@@ -1057,7 +1109,13 @@
     
     Object.defineProperty(root, "namespace", { enumerable: true, value: (function(){
         var ctx = root
-        
+          , definer = function define(key, value){ return Object.defineProperty(ctx, key, { enumerable: true, value: value })[key] }
+          , invoker = new Invoker({
+                $: sleipnir
+              , sleipnir: sleipnir
+              , def: definer
+              , define: definer
+            })
         return function(name, scope){
             var pctx = ctx
             
@@ -1065,16 +1123,12 @@
               throw new Error("invalid argument(s)")
             
             ctx = Object.create(null, { toString: { value: function(){ return "namespace" } } })
-            scope.call(null, function define(key, value){ return Object.defineProperty(ctx, key, { enumerable: true, value: value })[key] }, sleipnir)
+            invoker.apply(scope)
             Object.defineProperty(pctx, name, { enumerable: true, value: ctx })
             ctx = pctx
         }
     }()) })
     
-    
-    namespace("sleipnir", function(def){
-        for ( var k in sleipnir )
-          def(k, sleipnir[k])
-    }) 
+    Object.defineProperty(root, "sleipnir", { value: sleipnir })
 }(window))
 

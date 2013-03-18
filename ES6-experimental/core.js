@@ -1,6 +1,6 @@
 (function(root){ "use strict"
     let ns = {}
-      , version = ns.version = "ES6-0.5.alpha"
+      , version = ns.version = "ES6-0.5.alpha2"
       
       , invoke = function(fn=function(){}, args=[], ctx=null){
             switch ( args.length ){
@@ -60,10 +60,10 @@
                     let events = this._events || Object.defineProperty(this, "_events", { value: {} })._events
                       , handlers = events[type]
                     
-                    if ( !handlers )
+                    if ( !handlers || handlers === Object.prototype[type] )
                       events[type] = handler
                     else
-                      if ( typeof handlers == "function" )
+                      if ( typeof handlers == "function" || typeof handlers.handleEvent == "function" )
                         events[type] = [handlers, handler]
                       else
                         handlers.push(handler)
@@ -77,7 +77,7 @@
                       , handlers = events[type]
                       , idx
                     
-                    if ( typeof handlers == "function" && handlers === handler )
+                    if ( handlers === handler )
                       delete events[type]
                     
                     if ( Array.isArray(handlers) )
@@ -98,10 +98,15 @@
                     if ( !handlers )
                       return
                     else
-                      if ( typeof handlers == "function")
+                      if ( typeof handlers.handleEvent == "function" )
+                        invoke(handlers.handleEvent, args, handlers)
+                      else if ( typeof handlers == "function" )
                         invoke(handlers, args)
                       else for ( let [i, fn] of Iterator(handlers) )
-                        invoke(fn, args)
+                        if ( typeof fn.handleEvent == "function")
+                          invoke(fn.handleEvent, args, fn)
+                        else
+                          invoke(fn, args)
                     
                     return this
                 }
