@@ -1,6 +1,6 @@
 (function(root){ "use strict"
     let ns = {}
-      , version = ns.version = "ES6-0.5.alpha2"
+      , version = ns.version = "ES6-0.5.alpha3"
       
       , invoke = function(fn=function(){}, args=[], ctx=null){
             switch ( args.length ){

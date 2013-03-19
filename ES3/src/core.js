@@ -1,6 +1,6 @@
 (function(root){ "use strict"
     var ns = {}
-      , version = ns.version = "ES3-0.5.7"
+      , version = ns.version = "ES3-0.5.8"
 
       , noop = function(){}
         
@@ -29,6 +29,15 @@
                   if ( a[i] === s )
                     return i
                   return -1
+            }
+        }())
+      , trim = ns.trim = (function(){
+            if ( String.prototype.trim )
+              return function(str){
+                  return str.trim()
+              }
+            return function(str){
+                return str.replace(/^\s+|\s+$/g, "")
             }
         }())
       , enumerate = ns.enumerate = Object.keys || function(o){
@@ -485,6 +494,61 @@
 
             return Promise
         }())
+        
+      , Invoker = ns.Invoker = klass(function(){
+            var rargs = /^function(?:[^\(]*)\(([^\)]*)/
+            
+            return {
+                constructor: function(rules){
+                    if ( rules )
+                      this.rules(rules)
+                }
+              , rules: function(rules){
+                    var ite, r
+                    
+                    this._rules = {}
+                    
+                    if ( rules )
+                      for ( r in ite = new Iterator(rules).enumerate() )
+                        this._rules[ite[r][0]] = ite[r][1]
+                    
+                    return this
+                }
+              , apply: function(fn, args, ctx){
+                    var rules = this._rules || {}
+                      , res, i, l, a, _a=0, v
+                      , args = slice(args || [])
+                    
+                    if ( typeof fn != "function" )
+                      this.emit("error", new TypeError("invalid argument 0, function expected"))
+                    
+                    if ( !isArray(args) )
+                      this.emit("error", new TypeError("invalid argument 1, arguments or array expected"))
+                    
+                    res = ([].concat(fn.toString().match(rargs))[1] || "").split(",")
+                    
+                    for ( i = 0, l = res.length; i < l; i++ )
+                      if ( a = trim(res[i]), v = rules.hasOwnProperty(a) ? rules[a] : undefined, v )
+                        res[i] = v
+                      else
+                        res[i] = args[_a++] 
+                    
+                    for ( i = _a, l = args.length; i < l; i++)
+                      res.push(args[i])
+                    
+                    return invoke(fn, res, ctx)
+                }
+              , construct: function(fn, args){
+                    var invoker = this
+                    function F(){
+                        invoker.apply(fn, args, this)
+                    }
+                    F.prototype = fn.prototype
+                    
+                    return new F
+                }
+            }
+        }())
 
       , Iterator = ns.Iterator = klass(EventEmitter, {
             constructor: function(range, opt_keys){
@@ -536,99 +600,108 @@
             }
         })
 
-      , Router = ns.Router = klass(EventEmitter, {
-            constructor: function(routes, dispatcher){
-                  var dispatcher = typeof arguments[arguments.length-1] == "function" ? arguments[arguments.length-1] : function(){ return false }
-                    , routes = arguments[0] && arguments[0].constructor == Object ? arguments[0] : null
-
-                  this._routes = {}
-                  this._dispatcher = dispatcher
-
-                  if ( routes )
-                    this.when(routes)
-              }
-            , _isRouter: true
-            , onstopiteration: null
-            , dispatch: function(){
-                  var self = this
-                    , args = slice(arguments)
-                    , iterator = new Iterator(this._routes)
-
-                    , handle = function(iteration){
-                          var handler, i, l
-
-                          handler = iteration[1]
-                          if ( typeof handler == "function" )
-                            return invoke(handler, [next].concat(args), self)
-                          else {
-                            for ( i = 0, l = handler.length -1; i<l; i++ )
-                              invoke(handler[i], [function(){
-                                  setTimeout(function(){ // throw error, without breaking the function stack (non-critical error)
-                                    self.emit('error', "next() invoked on a non-last route handler (manage your routes handlers carefully)")
-                                  }, 0)
-                              }].concat(args), self)
-                            return invoke(handler[l], [next].concat(args), self)
+      , Router = ns.Router = klass(EventEmitter, function(){
+            function dDispatcher(r, c){ return r === c }
+            function eNext(){
+                var self = this
+                setTimeout(function(){
+                  self.emit('error', "next() invoked on a non-last route handler (manage your routes handlers carefully)")
+                }, 0)
+            }
+            
+            return {
+                constructor: function(routes, dispatcher){
+                      var dispatcher = typeof arguments[arguments.length-1] == "function" ? arguments[arguments.length-1] : dDispatcher
+                        , routes = arguments[0] && arguments[0].constructor == Object ? arguments[0] : null
+        
+                      this._routes = {}
+                      this._dispatcher = dispatcher
+        
+                      if ( routes )
+                        this.when(routes)
+                  }
+                , _isRouter: true
+                , onstopiteration: null
+                , dispatch: function(){
+                      var self = this
+                        , route = arguments[0]
+                        , args = slice(arguments, 1)
+                        , iterator = new Iterator(this._routes)
+                        , _next, invoker = new Invoker({ $route: route, $next: function(){ return invoke(_next, [], self) } })
+                          
+                        , handle = function(iteration){
+                              var handler, i, l
+                  
+                              handler = iteration[1]
+                              if ( typeof handler == "function" )
+                                return _next = next, invoker.apply(handler, args, self)
+                              else {
+                                for ( i = 0, l = handler.length -1; i<l; i++ )
+                                  _next = function(){ invoke(eNext, [], self) },
+                                  invoker.apply(handler[i], args, self)
+                                return _next = next, invoker.apply(handler[l], args, self)
+                              }
                           }
-                      }
-
-                    , next = function(){
-                          var iteration, hit
-
-                          try {
-                            iteration = iterator.next()
-                            hit = iteration[0] === "*" ? true : invoke(self._dispatcher, [iteration[0]].concat(args), null) //* always hit
-                          } catch(e){
-                            if ( e instanceof errors.StopIterationError && typeof self.onstopiteration == "function" )
-                              return invoke(self.onstopiteration, [e].concat(args), self)
-
-                            return self.emit('error', e)
+                  
+                        , next = function(){
+                              var iteration, hit
+                  
+                              try {
+                                iteration = iterator.next()
+                                hit = iteration[0] === "*" ? true : invoke(self._dispatcher, [iteration[0]].concat(route, args), null) //* always hit
+                              } catch(e){
+                                if ( e instanceof errors.StopIterationError && typeof self.onstopiteration == "function" )
+                                  return _next = undefined, invoker.apply(self.onstopiteration, [e].concat(route, args), self)
+                  
+                                return self.emit('error', e)
+                              }
+                  
+                              if ( !hit )
+                                return next()
+                              else
+                                return handle(iteration)
                           }
-
-                          if ( !hit )
-                            return next()
-                          else
-                            return handle(iteration)
+                  
+                      return next()
+                  }
+                , when: function(rule, handler){
+                      var k, i, l
+                      if ( arguments.length == 1 ){
+                          for ( k = enumerate(rule) , i = 0, l = k.length  ; i<l; i++ )
+                            this.when(k[i], rule[k[i]])
+                          return this
                       }
-
-                  return next()
-              }
-            , when: function(rule, handler){
-                  var k, i, l
-                  if ( arguments.length == 1 ){
-                      for ( k = enumerate(rule) , i = 0, l = k.length  ; i<l; i++ )
-                        this.when(k[i], rule[k[i]])
+        
+                      if ( typeof handler != "function" )
+                        this.emit('error', new TypeError("argument 1 is expected to be a function"))
+        
+                      if ( !this._routes[rule] || this._routes[rule] === Object.prototype[rule] )
+                        this._routes[rule] = handler
+                      else if ( typeof this._routes[rule] == "function" )
+                        this._routes[rule] = [this._routes[rule], handler]
+                      else
+                        this._routes[rule].push(handler)
+        
                       return this
                   }
-
-                  if ( typeof handler != "function" )
-                    this.emit('error', new TypeError("argument 1 is expected to be a function"))
-
-                  if ( !this._routes[rule] || this._routes[rule] === Object.prototype[rule] )
-                    this._routes[rule] = handler
-                  else if ( typeof this._routes[rule] == "function" )
-                    this._routes[rule] = [this._routes[rule], handler]
-                  else
-                    this._routes[rule].push(handler)
-
-                  return this
-              }
-            , route: function(rule){
-                  var route = (this._routes || {})[rule]
-
-                  if ( isArray(route) )
-                    route = [].concat[route]
-
-                  return route
-              }
-            , routes: function(){
-                  var data = this._routes || {}
-                    , copy = {}
-                    , iterator = new Iterator(data), ite, i
-
-                  for ( i in ite = iterator.enumerate() )
-                    copy[ite[i][0]] = this.route(ite[i][0])
-
-                  return copy
+                , route: function(rule){
+                      var route = (this._routes || {})[rule]
+        
+                      if ( isArray(route) )
+                        route = [].concat[route]
+        
+                      return route
+                  }
+                , routes: function(){
+                      var data = this._routes || {}
+                        , copy = {}
+                        , iterator = new Iterator(data), ite, i
+        
+                      for ( i in ite = iterator.enumerate() )
+                        copy[ite[i][0]] = this.route(ite[i][0])
+        
+                      return copy
+                  }
               }
         })
 

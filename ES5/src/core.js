@@ -1,7 +1,7 @@
 (function(root){ "use strict"
     var 
         sleipnir = {}
-      , version = sleipnir.version = "ES5-0.5.5"
+      , version = sleipnir.version = "ES5-0.5.6"
       
       , noop = function(){}
       
@@ -510,11 +510,11 @@
               , rules: {
                     value: function(rules){
                         var ite, r
-                        Object.defineProperty(this, "_rules", { value: {} })
+                          , _rules = this._rules || Object.defineProperty(this, "_rules", { value: {} })._rules
                         
                         if ( rules )
                           for ( r in ite = new Iterator(rules).enum )
-                            this._rules[ite[r][0]] = ite[r][1]
+                            _rules[ite[r][0]] = ite[r][1]
                         
                         return this
                     }
@@ -534,7 +534,7 @@
                         res = ([].concat(fn.toString().match(rargs))[1] || "").split(",")
                         
                         for ( i = 0, l = res.length; i < l; i++ )
-                          if ( a = res[i].trim(), v = rules[a], v )
+                          if ( a = res[i].trim(), v = rules[a] && rules.hasOwnProperty(a) ? rules[a] : undefined, v )
                             res[i] = v
                           else
                             res[i] = args[_a++] 
@@ -630,103 +630,112 @@
             }
         })
       
-      , Router = sleipnir.Router = klass(EventEmitter, {
-            constructor: function(routes, dispatcher){
-                var dispatcher = typeof arguments[arguments.length-1] == "function" ? arguments[arguments.length-1] : function(){ return false }
-                  , routes = arguments[0] && arguments[0].constructor == Object ? arguments[0] : null
-                
-                Object.defineProperties(this, {
-                    _routes: { value: {} }
-                  , _dispatcher: { writable: true, value: dispatcher }
-                })
-                
-                if ( routes )
-                  this.when(routes)
+      , Router = sleipnir.Router = klass(EventEmitter, function(){
+            function dDispatcher(r, c){ return r === c }
+            function eNext(){
+                var self = this
+                setTimeout(function(){
+                  self.emit('error', "next() invoked on a non-last route handler (manage your routes handlers carefully)")
+                }, 0)
             }
             
-          , onstopiteration: { writable: true, value: null }
-          , dispatch: {
-                value: function(){
-                    var self = this
-                      , args = slice(arguments)
-                      , iterator = new Iterator(this._routes)
-                      
-                      , handle = function(iteration){
-                            var handler, i, l
-                                                        
-                            handler = iteration[1]
-                            if ( typeof handler == "function" )
-                              return invoke(handler, [next].concat(args), self)
-                            else {
-                              for ( i = 0, l = handler.length -1; i<l; i++ )
-                                invoke(handler[i], [function(){
-                                    setTimeout(function(){ // throw error, without breaking the function stack (non-critical error)
-                                      self.emit('error', "next() invoked on a non-last route handler (manage your routes handlers carefully)")
-                                    }, 0)
-                                }].concat(args), self)
-                              return invoke(handler[l], [next].concat(args), self)
+            return {
+                constructor: function(routes, dispatcher){
+                    var dispatcher = typeof arguments[arguments.length-1] == "function" ? arguments[arguments.length-1] : dDispatcher
+                      , routes = arguments[0] && arguments[0].constructor == Object ? arguments[0] : null
+                    
+                    Object.defineProperties(this, {
+                        _routes: { value: {} }
+                      , _dispatcher: { writable: true, value: dispatcher }
+                    })
+                    
+                    if ( routes )
+                      this.when(routes)
+                }
+                
+              , onstopiteration: { writable: true, value: null }
+              , dispatch: {
+                    value: function(){
+                        var self = this
+                          , route = arguments[0]
+                          , args = slice(arguments, 1)
+                          , iterator = new Iterator(this._routes)
+                          , _next, invoker = new Invoker({ $route: route, $next: function(){ return invoke(_next, [], self) } })
+                          
+                          , handle = function(iteration){
+                                var handler, i, l
+                                                            
+                                handler = iteration[1]
+                                if ( typeof handler == "function" )
+                                  return _next = next, invoker.apply(handler, args, self)
+                                else {
+                                  for ( i = 0, l = handler.length -1; i<l; i++ )
+                                    _next = function(){ invoke(eNext, [], self) },
+                                    invoker.apply(handler[i], args, self)
+                                  return _next = next, invoker.apply(handler[l], args, self)
+                                }
                             }
+                            
+                          , next = function(){
+                                var iteration, hit
+                                
+                                try {
+                                  iteration = iterator.next()
+                                  hit = iteration[0] === "*" ? true : invoke(self._dispatcher, [iteration[0]].concat(route, args), null) //* always hit
+                                } catch(e){
+                                  if ( e instanceof errors.StopIterationError && typeof self.onstopiteration == "function" )
+                                    return _next = undefined, invoker.apply(self.onstopiteration, [e].concat(route, args), self)
+                                  
+                                  return self.emit('error', e)
+                                }
+                                
+                                if ( !hit )
+                                  return next()
+                                else
+                                  return handle(iteration)
+                            }
+                        
+                        return next()
+                    }
+                }
+                
+              , when: {
+                    value: function(rule, handler){
+                        var k, i, l
+                        if ( arguments.length == 1 ){
+                            for ( k = Object.keys(rule) , i = 0, l = k.length  ; i<l; i++ )
+                              this.when(k[i], rule[k[i]])
+                            return this
                         }
                         
-                      , next = function(){
-                            var iteration, hit
-                            
-                            try {
-                              iteration = iterator.next()
-                              hit = iteration[0] === "*" ? true : invoke(self._dispatcher, [iteration[0]].concat(args), null) //* always hit
-                            } catch(e){
-                              if ( e instanceof errors.StopIterationError && typeof self.onstopiteration == "function" )
-                                return invoke(self.onstopiteration, [e].concat(args), self)
-                              
-                              return self.emit('error', e)
-                            }
-                            
-                            if ( !hit )
-                              return next()
-                            else
-                              return handle(iteration)
-                        }
-                    
-                    return next()
-                }
-            }
-            
-          , when: {
-                value: function(rule, handler){
-                    var k, i, l
-                    if ( arguments.length == 1 ){
-                        for ( k = Object.keys(rule) , i = 0, l = k.length  ; i<l; i++ )
-                          this.when(k[i], rule[k[i]])
+                        if ( typeof handler != "function" )
+                          this.emit('error', new TypeError("argument 1 is expected to be a function"))
+                        
+                        if ( !this._routes[rule] || this._routes[rule] === Object.prototype[rule] )
+                          this._routes[rule] = handler
+                        else if ( typeof this._routes[rule] == "function" )
+                          this._routes[rule] = [this._routes[rule], handler]
+                        else
+                          this._routes[rule].push(handler)
+                        
                         return this
                     }
-                    
-                    if ( typeof handler != "function" )
-                      this.emit('error', new TypeError("argument 1 is expected to be a function"))
-                    
-                    if ( !this._routes[rule] || this._routes[rule] === Object.prototype[rule] )
-                      this._routes[rule] = handler
-                    else if ( typeof this._routes[rule] == "function" )
-                      this._routes[rule] = [this._routes[rule], handler]
-                    else
-                      this._routes[rule].push(handler)
-                    
-                    return this
                 }
-            }
-          , length: {
-                get: function(){
-                    return Object.keys( (this._routes || {}) ).length
+              , length: {
+                    get: function(){
+                        return Object.keys( (this._routes || {}) ).length
+                    }
                 }
-            }
-            
-          , valueOf: {
-                value: function(){
-                    return this.length
+                
+              , valueOf: {
+                    value: function(){
+                        return this.length
+                    }
                 }
-            }
-          , toString: {
-                value: function(){
-                    return "[object Router]"
+              , toString: {
+                    value: function(){
+                        return "[object Router]"
+                    }
                 }
             }
         })
@@ -1112,9 +1121,9 @@
           , definer = function define(key, value){ return Object.defineProperty(ctx, key, { enumerable: true, value: value })[key] }
           , invoker = new Invoker({
                 $: sleipnir
-              , sleipnir: sleipnir
-              , def: definer
-              , define: definer
+              , $sleipnir: sleipnir
+              , $def: definer
+              , $define: definer
             })
         return function(name, scope){
             var pctx = ctx
