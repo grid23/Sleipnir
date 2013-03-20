@@ -1,7 +1,7 @@
 (function(root){ "use strict"
     var 
         sleipnir = {}
-      , version = sleipnir.version = "ES5-0.5.6"
+      , version = sleipnir.version = "ES5-0.5.7"
       
       , noop = function(){}
       
@@ -138,6 +138,7 @@
                           , listeners = events[type], _arr
                           , args = arguments.length > 1 ? slice(arguments, 1) : []
                           , i, l
+                          , invoker = new Invoker({ $event: type })
                         
                         if ( typeof type != "string" )
                           return this.emit('error', new TypeError("invalid argument 0"))
@@ -150,16 +151,16 @@
                         
                         if ( listeners )
                           if ( typeof listeners.handleEvent == "function")
-                            invoke(listeners.handleEvent, args, listeners)
+                            invoker.apply(listeners.handleEvent, args, listeners)
                           else if ( typeof listeners == "function" )
-                            invoke(listeners, args)
+                            invoker.apply(listeners, args)
                           else {
                             _arr = [].concat(listeners) //copy array to prevent manipulation of the listeners during the loop
                             for ( i = 0, l = _arr.length; i<l; i++ )
                               if ( typeof _arr[i].handleEvent == "function" )
-                                invoke(_arr[i].hendleEvent, args, _arr[i])
+                                invoker.apply(_arr[i].hendleEvent, args, _arr[i])
                               else
-                                invoke(_arr[i], args)
+                                invoker.apply(_arr[i], args)
                           }
                         for ( i = 0, l = pipes.length; i<l; i++ )
                           invoke(EventEmitter.prototype.emit, [pipes[i].prefix+type].concat(args), pipes[i].emitter)
