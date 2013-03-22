@@ -1,6 +1,6 @@
 (function(root){ "use strict"
     var ns = {}
-      , version = ns.version = "ES3-0.5.9"
+      , version = ns.version = "ES3-0.5.10"
 
       , noop = function(){}
         
@@ -121,13 +121,15 @@
                     delete prototype.constructor
                     return constructor
                 }()) : function(){}
+              
+              , k
 
               Class.prototype = {}
-              for ( var k in superPrototype )
+              for ( k in superPrototype ) if ( superPrototype.hasOwnProperty(k) )
                 Class.prototype[k] = superPrototype[k]
 
 
-              for ( var k in prototype )
+              for ( k in prototype ) if ( prototype.hasOwnProperty(k) )
                 Class.prototype[k] = prototype[k]
 
               Class.prototype.constructor = Class
@@ -649,7 +651,7 @@
                   
                               try {
                                 iteration = iterator.next()
-                                hit = iteration[0] === "*" ? true : invoke(self._dispatcher, [iteration[0]].concat(route, args), null) //* always hit
+                                hit = iteration[0] === "*" ? true : invoke(self._dispatcher, [iteration[0]].concat([route].concat(args)), null) //* always hit
                               } catch(e){
                                 if ( e instanceof errors.StopIterationError && typeof self.onstopiteration == "function" )
                                   return _next = undefined, invoker.apply(self.onstopiteration, [e].concat(route, args), self)

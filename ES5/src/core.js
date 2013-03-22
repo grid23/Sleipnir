@@ -1,7 +1,7 @@
 (function(root){ "use strict"
     var 
         sleipnir = {}
-      , version = sleipnir.version = "ES5-0.5.7"
+      , version = sleipnir.version = "ES5-0.5.8"
       
       , noop = function(){}
       
@@ -682,7 +682,7 @@
                                 
                                 try {
                                   iteration = iterator.next()
-                                  hit = iteration[0] === "*" ? true : invoke(self._dispatcher, [iteration[0]].concat(route, args), null) //* always hit
+                                  hit = iteration[0] === "*" ? true : invoke(self._dispatcher, [iteration[0]].concat([route].concat(args)), null) //* always hit
                                 } catch(e){
                                   if ( e instanceof errors.StopIterationError && typeof self.onstopiteration == "function" )
                                     return _next = undefined, invoker.apply(self.onstopiteration, [e].concat(route, args), self)
