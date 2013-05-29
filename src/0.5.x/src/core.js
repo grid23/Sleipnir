@@ -1,9 +1,9 @@
 (function(root){ "use strict"
     var ns = {}
-      , version = ns.version = "ES3-0.5.10"
+      , version = ns.version = "ES3-0.5.11"
 
       , noop = function(){}
-        
+
       , toType = ns.toType = (function(){
             var toString = Object.prototype.toString
 
@@ -55,32 +55,32 @@
 
       , serialize = ns.serialize = function(){
             var args = arguments.length > 1 && arguments || arguments[0]
-              , iterator = new Iterator(args), ite, i
+              , iterator = new Iterator(args), ite = iterator.enumerate(), i = 0, l = ite.length
               , str = []
 
-            for ( i in ite = iterator.enumerate() )
+            for ( ; i < l; i++ )
               str.push( encodeURIComponent(ite[i][0]) +"="+ encodeURIComponent(ite[i][1]) )
 
             return str.join("&").replace(/%20/g, "+")
         }
       , objectify = ns.objectify = (function(){
             var ramp = /&amp;|&/g
-            
+
             return function(str){
                 var o = {}
-                  , pairs = !!~ str.search(ramp) ? str.split(ramp) : []
-                  , iterator = new Iterator(pairs), ite, i
-                
-                for ( i in ite = iterator.enumerate() )
+                  , pairs = !!~ str.search(ramp) ? str.split(ramp) : str.length ? [str] : []
+                  , iterator = new Iterator(pairs), ite = iterator.enumerate(), i = 0, l = ite.length
+
+                for ( ; i < l; i++ )
                   (function(pair, o){
                       var pair = decodeURIComponent(pair.replace(/\+/g, "%20")) 
                         , idx = pair.indexOf("=")
                         , key = pair.split("=", 1)
                         , value = pair.slice(idx+1)
-                      
+
                       o[key] = value
                   }(ite[i][1], o))
-                
+
                 return o
             }
         }())
@@ -109,10 +109,12 @@
       , klass = ns.klass = function(){
             var SuperClass = arguments.length == 2 ? arguments[0] : null
               , superPrototype = SuperClass ? SuperClass.prototype : {}
+              , statics = {}
+              , k
 
               , prototype = (function(properties){
                     if ( typeof properties == "function" )
-                      return properties(SuperClass)
+                      return properties(SuperClass, statics)
                     return properties || {}
                 }( arguments[arguments.length-1] ))
 
@@ -121,8 +123,6 @@
                     delete prototype.constructor
                     return constructor
                 }()) : function(){}
-              
-              , k
 
               Class.prototype = {}
               for ( k in superPrototype ) if ( superPrototype.hasOwnProperty(k) )
@@ -148,33 +148,41 @@
                   return klass(Class, prototype)
               }
 
+              for ( k in statics ) 
+                if ( statics.hasOwnProperty(k) && !Class.hasOwnProperty(k) )
+                  Class[k] = statics[k]
+
             return Class
         }
 
       , singleton = ns.singleton = function(){
-            var C, F, fn, instance, output
-            
+            var C, F, k, fn, instance, output
+
             C = invoke(klass, arguments, null)
-            
+
             fn = function(){
                 var args = arguments
-                
+
                 if ( instance )
                   return output
-                
+
                 F = function(){
                     instance = this
                     output = invoke(C, args, this)
                     return output
                 }
                 F.prototype = C.prototype
-                
+
                 return new F
             }
-            
+
+            for ( k in C ) if ( C.hasOwnProperty(k) )
+              fn[k] = C[k]
+
             fn.create = function(){
                 return invoke(fn, arguments)
             }
+
             return fn
         }
 
@@ -198,111 +206,112 @@
             return {
                 _isEventEmitter: true
               , emit: function(type){
-                    var events = this._events = this._events || {}
+                    var ee = this
+                      , events = this._events = this._events || {}
                       , pipes = this._pipes = this._pipes || []
                       , listeners = events[type], _arr
                       , args = arguments.length > 1 ? slice(arguments, 1) : []
                       , i, l
                       , invoker = new Invoker({ $event: type })
-                    
+
                     if ( typeof type != "string" )
                       return this.emit('error', new TypeError("invalid argument 0"))
-                    
+
                     if ( type == "error" && !listeners )
                         if ( arguments[1] instanceof Error || arguments[1]._isError )
                           throw arguments[1]
                         else
                           throw new Error( arguments[1] )
-                    
+
                     if ( listeners )
                       if ( typeof listeners.handleEvent == "function" )
                         invoker.apply(listeners.handleEvent, args, listeners)
                       else if ( typeof listeners == "function" )
-                        invoker.apply(listeners, args)
+                        invoker.apply(listeners, args, ee)
                       else {
                         _arr = [].concat(listeners) //copy array to prevent manipulation of the listeners during the loop
                         for ( i = 0, l = _arr.length; i<l; i++ )
                           if ( typeof _arr[i].handleEvent == "function" )
                             invoker.apply(_arr[i].handleEvent, args, _arr[i])
                           else
-                            invoker.apply(_arr[i], args)
+                            invoker.apply(_arr[i], args, ee)
                       }
-                    
+
                     for ( i = 0, l = pipes.length; i<l; i++ )
                       invoke(EventEmitter.prototype.emit, [pipes[i].prefix+type].concat(args), pipes[i].emitter)
-                    
+
                     return this
                 }
-                
+
               , on: function(type, fn){
                     var events = this._events = this._events || {}
                       , listeners = events[type]
-                    
+
                     if ( !fn || (typeof fn != "function" && typeof fn.handleEvent != "function") )
                       return this.emit('error', new TypeError("invalid argument 1"))
-                    
+
                     if ( !listeners || listeners === Object.prototype[type] )
                       events[type] = fn
                     else if ( typeof listeners == "function" || typeof listeners.handleEvent == "function" )
                       events[type] = [events[type], fn]
                     else
                       listeners.push(fn)
-                    
+
                     return this
                 }
               , once: function(type, fn){
                     var self = this, _f
-                    
+
                     if ( !fn || (typeof fn != "function" && typeof fn.handleEvent != "function") )
                         return this.emit('error', new TypeError("missing/bad arguments[1]"))
-                    
+
                     _f = function(){
                         var _fn, _ctx
-                        
+
                         if ( typeof fn.handleEvent == "function" )
                           _fn = fn.handleEvent, _ctx = fn
                         else
                           _fn = fn, _ctx = null
-                        
+
                         invoke(_fn, arguments, _ctx)
                         self.off(type, _f) 
                     }
-                    
+
                     return this.on(type, _f)
                 }
               , off: function(type, fn){
                     var events = this._events = this._events || {}
                           , listeners = events[type]
                           , idx
-                        
+
                         if ( !type || typeof type != "string" )
                           return this.emit('error', new TypeError("invalid argument 0") )
-                        
+
                         if ( fn === "*" || !fn )
                           delete events[type]
-                          
+
                         if ( typeof fn == "function")
                           if ( listeners )
                             if ( listeners === fn )
                               delete events[type]
                             else {
-                              while ( idx = listeners.indexOf(fn), !!~idx )
+                              while ( idx = indexOf(listeners, fn), !!~idx )
                                 events[type].splice(idx, 1)
-                              
+
                               if ( !events[type].length )
                                 delete events[type]
                             }
-                        
+
                         return this
                 }
-              
+
               , listeners: function(type){
                     var events = this._events = this._events || {}
                     , listeners = events[type]
-                    
+
                     if ( isArray(listeners) )
                       return listeners
-                    
+
                     return !!listeners ? [listeners] : []
                 }
 
@@ -330,27 +339,52 @@
                         var state = this._state || -1
                           , _yield = this._yield || null
                           , oPromise = new Promise
+                          , rv
 
-                        if ( state == 1 && typeof onresolve == "function" )
-                          invoke(onresolve, _yield, null)
-                        if ( state == 0 && typeof onreject == "function" )
-                          invoke(onreject, _yield, null)
+                        if ( state == 1 && typeof onresolve == "function" ) {
+                          rv = invoke(onresolve, _yield, null)
+                          if ( rv && rv._isPromise )
+                            rv.then(function(){
+                                invoke(oPromise.resolve, arguments, oPromise)
+                            })
+                          else
+                            oPromise.resolve(rv)
+                        }
+                        else if ( state == 0 && typeof onreject == "function" ) {
+                          rv = invoke(onreject, _yield, null)
+                          if ( rv && rv._isPromise )
+                            rv.then(null, function(){
+                                invoke(oPromise.reject, arguments, oPromise)
+                            })
+                          else
+                            oPromise.reject(rv)
+                        }
 
                         if ( state == -1 ) {
                           if ( typeof onresolve == "function" )
                             this.once("resolve", function(){
-                                invoke(onresolve, arguments)
-                                oPromise.resolve()
+                                rv = invoke(onresolve, arguments)
+                                if ( rv && rv._isPromise )
+                                  rv.then(function(){
+                                    invoke(oPromise.resolve, arguments, oPromise)
+                                  })
+                                else
+                                  oPromise.resolve(rv)
                             })
                           if ( typeof onreject == "function" )
                             this.once("reject", function(){
-                                invoke(onreject, arguments)
-                                oPromise.reject()
+                                rv = invoke(onreject, arguments)
+                                if ( rv && rv._isPromise )
+                                  rv.then(null, function(){
+                                      invoke(oPromise.reject, arguments, oPromise)
+                                  })
+                                else
+                                  oPromise.reject(rv)
                             })
                           if ( typeof onprogress == "function" )
                             this.on("progress", function(){
                                 invoke(onprogress, arguments)
-                                oPromise.progress()
+                                invoke(oPromise.progress, arguments, oPromise)
                             })
                         }
 
@@ -405,7 +439,7 @@
                         this._yield = []
                         this._state = -1
                         this._closed = 0
-                        
+
                         if ( !arguments.length )
                           return this.reject(null)
                         else if ( arguments.length == 1)
@@ -427,19 +461,19 @@
                                     self.reject(prom)
                                 })
                             }(promises[i], i))
-                          
+
                         this._closed = 1
                     }
                   , progress: function(prom, data){
                         var self = this, args 
                           , promises = this._promises || []
                           , i, l, inprogress = 0
-                        
+
                         if ( !this._closed )
                           return args = slice(arguments), setTimeout(function(){
                               invoke(Group.prototype.progress, args, self)
                           }, 0)
-                        
+
                         for ( i = 0, l = promises.length; i<l; i++)
                           switch ( promises[i].status() ) {
                               case -1:
@@ -458,25 +492,6 @@
                     }
                 })
 
-              , Sequence = klass(Promise, {
-                    constructor: function(){
-                        var callbacks = isArray(arguments[0]) ? arguments[0] : slice(arguments)
-                          , main, output, iterator, ite, i
-
-                        main = output = new Promise
-
-                        iterator = new Iterator(callbacks)
-
-                        for ( i in ite = iterator.enumerate() )
-                          if ( typeof ite[i][1] != "function" )
-                            this.emit("error", new TypeError("invalid argument"))
-                          else
-                            output = output.then(ite[i][1])
-
-                        return main
-                    }
-                })
-
             Promise.group = function(){
                 var args = arguments
 
@@ -487,58 +502,75 @@
             }
 
             Promise.sequence = function(){
-                var args = arguments
+                var fns = isArray(arguments[0]) ? arguments[0] : slice(arguments)
+                  , l = fns.length
 
-                function F(){ return invoke(Sequence, args, this) }
-                F.prototype = Sequence.prototype
+                return function(fns, l){
+                    return function(){
+                        var promise = new Promise
+                          , output = promise
+                          , args = slice(arguments)
+                          , i = 0
 
-                return new F
+                        for ( ; i < l; i++ )
+                          if ( typeof fns[i] == "function" )
+                            output = output.then(fns[i])
+                          else
+                            promise.emit("error", new TypeError("invalid argument"))
+
+                        setTimeout(function(){
+                            invoke(promise.resolve, args, promise)
+                        }, 0)
+
+                        return output
+                    }
+                }(fns, l)
             }
 
             return Promise
         }())
-        
+
       , Invoker = ns.Invoker = klass(function(){
             var rargs = /^function(?:[^\(]*)\(([^\)]*)/
-            
+
             return {
                 constructor: function(rules){
                     if ( rules )
                       this.rules(rules)
                 }
               , rules: function(rules){
-                    var ite, r
-                    
+                    var ite = new Iterator(rules).enumerate(), i = 0, l = ite.length
+
                     this._rules = {}
-                    
+
                     if ( rules )
-                      for ( r in ite = new Iterator(rules).enumerate() )
-                        this._rules[ite[r][0]] = ite[r][1]
-                    
+                      for ( ; i < l; i++  )
+                        this._rules[ite[i][0]] = ite[i][1]
+
                     return this
                 }
               , apply: function(fn, args, ctx){
                     var rules = this._rules || {}
                       , res, i, l, a, _a=0, v
                       , args = slice(args || [])
-                    
+
                     if ( typeof fn != "function" )
                       this.emit("error", new TypeError("invalid argument 0, function expected"))
-                    
+
                     if ( !isArray(args) )
                       this.emit("error", new TypeError("invalid argument 1, arguments or array expected"))
-                    
+
                     res = ([].concat(fn.toString().match(rargs))[1] || "").split(",")
-                    
+
                     for ( i = 0, l = res.length; i < l; i++ )
                       if ( a = trim(res[i]), v = rules.hasOwnProperty(a) ? rules[a] : undefined, v )
                         res[i] = v
                       else
                         res[i] = args[_a++] 
-                    
+
                     for ( i = _a, l = args.length; i < l; i++)
                       res.push(args[i])
-                    
+
                     return invoke(fn, res, ctx)
                 }
               , construct: function(fn, args){
@@ -547,7 +579,7 @@
                         invoker.apply(fn, args, this)
                     }
                     F.prototype = fn.prototype
-                    
+
                     return new F
                 }
             }
@@ -597,7 +629,9 @@
                 current = this._current = this._range[next]
                 return current
             }
-            
+          , length: function(){
+                return this._range.length
+            }
           , enumerate: function(){
                 return [].concat(this._range || [])
             }
@@ -611,15 +645,15 @@
                   self.emit('error', "next() invoked on a non-last route handler (manage your routes handlers carefully)")
                 }, 0)
             }
-            
+
             return {
                 constructor: function(routes, dispatcher){
                       var dispatcher = typeof arguments[arguments.length-1] == "function" ? arguments[arguments.length-1] : dDispatcher
                         , routes = arguments[0] && arguments[0].constructor == Object ? arguments[0] : null
-        
+
                       this._routes = {}
                       this._dispatcher = dispatcher
-        
+
                       if ( routes )
                         this.when(routes)
                   }
@@ -631,10 +665,10 @@
                         , args = slice(arguments, 1)
                         , iterator = new Iterator(this._routes)
                         , _next, invoker = new Invoker({ $route: route, $next: function(){ return invoke(_next, [], self) } })
-                          
+
                         , handle = function(iteration){
                               var handler, i, l
-                  
+
                               handler = iteration[1]
                               if ( typeof handler == "function" )
                                 return _next = next, invoker.apply(handler, args, self)
@@ -645,26 +679,26 @@
                                 return _next = next, invoker.apply(handler[l], args, self)
                               }
                           }
-                  
+
                         , next = function(){
                               var iteration, hit
-                  
+
                               try {
                                 iteration = iterator.next()
                                 hit = iteration[0] === "*" ? true : invoke(self._dispatcher, [iteration[0]].concat([route].concat(args)), null) //* always hit
                               } catch(e){
                                 if ( e instanceof errors.StopIterationError && typeof self.onstopiteration == "function" )
                                   return _next = undefined, invoker.apply(self.onstopiteration, [e].concat(route, args), self)
-                  
+
                                 return self.emit('error', e)
                               }
-                  
+
                               if ( !hit )
                                 return next()
                               else
                                 return handle(iteration)
                           }
-                  
+
                       return next()
                   }
                 , when: function(rule, handler){
@@ -674,35 +708,35 @@
                             this.when(k[i], rule[k[i]])
                           return this
                       }
-        
+
                       if ( typeof handler != "function" )
                         this.emit('error', new TypeError("argument 1 is expected to be a function"))
-        
+
                       if ( !this._routes[rule] || this._routes[rule] === Object.prototype[rule] )
                         this._routes[rule] = handler
                       else if ( typeof this._routes[rule] == "function" )
                         this._routes[rule] = [this._routes[rule], handler]
                       else
                         this._routes[rule].push(handler)
-        
+
                       return this
                   }
                 , route: function(rule){
                       var route = (this._routes || {})[rule]
-        
+
                       if ( isArray(route) )
                         route = [].concat[route]
-        
+
                       return route
                   }
                 , routes: function(){
                       var data = this._routes || {}
                         , copy = {}
-                        , iterator = new Iterator(data), ite, i
-        
-                      for ( i in ite = iterator.enumerate() )
+                        , iterator = new Iterator(data), ite = iterator.enumerate(), i = 0, l = ite.length
+
+                      for ( ; i < l; i++ )
                         copy[ite[i][0]] = this.route(ite[i][0])
-        
+
                       return copy
                   }
               }
@@ -710,8 +744,27 @@
 
       , Model = ns.Model = klass(EventEmitter, {
             constructor: function(){
+                var model = this
                 if ( arguments.length )
                   invoke(Model.prototype.set, arguments, this)
+
+                this._update = {
+                    keys: []
+                  , timer: null
+                }
+
+                this.on('change', function(key){
+                    var keys = model._update.keys
+
+                    if ( !~indexOf(keys, key) )
+                      keys.push(key)
+
+                    clearTimeout(model._update.timer)
+                    model._update.timer = setTimeout(function(){
+                        model.emit('update', keys)
+                        keys.splice(0, keys.length)
+                    }, 0)
+                })
             }
           , _isModel: true
           , set: function(key, value){
@@ -755,10 +808,10 @@
             }
           , _fromHash: function(hash, root){
                 var self = this
-                  , iterator = new Iterator(hash), ite, i
+                  , iterator = new Iterator(hash), ite = iterator.enumerate(), i = 0, l = ite.length
                   , root = !!root ? root+'.' : ""
 
-                for ( i in ite = iterator.enumerate() )
+                for ( ; i < l; i++ )
                   self.set(root + ite[i][0], ite[i][1])
 
                 return this
@@ -781,11 +834,11 @@
 
                 if ( arguments.length == 1 && name && name.constructor == Object )
                   return (function(hash, self){
-                      var iterator = new Iterator(hash), ite, i
+                      var iterator = new Iterator(hash), ite = iterator.enumerate(), i = 0, l = ite.length
 
-                      for ( i in ite = iterator.enumerate() )
+                      for ( ; i < l; i++ )
                         self.hook(ite[i][0], ite[i][1])
-                      
+
                       return self
                   }(name, this))
 
@@ -834,21 +887,17 @@
 
                 return hits
             }
+          , iterator: function(){
+                return new Iterator(this._data || {})
+            }
           , enumerate: function(){
-                var data = this._data || {}
-                  , copy = {}
-                  , iterator = new Iterator(data), ite, i
-
-                for ( i in ite = iterator.enumerate() )
-                  copy[ite[i][0]] = ite[i][1]
-
-                return copy
+                return this.iterator().enumerate()
             }
           , length: function(){
                 var data = this._data || {}
                   , iterator = new Iterator(data, true)
 
-                return iterator.length
+                return iterator.length()
             }
           , serialize: function(){
                 return serialize( this._data || {} )
@@ -948,8 +997,9 @@
 
           , find: function(){
                 var models = this._models || []
-                  , iterator = new Iterator(models), ite, i
-                  , hits = [], hit, attributes = [], queries = [], l
+                  , iterator = new Iterator(models), ite = iterator.enumerate()
+                  , hits = [], hit, attributes = [], queries = []
+                  , i, l
 
 
                   if ( !arguments.length )
@@ -965,13 +1015,14 @@
 
                   for ( i = 0, l = attributes.length; i<l; i++ )
                     (function(attr){
-                        var iterator = new Iterator(attr), ite, i
+                        var iterator = new Iterator(attr), ite = iterator.enumerate(), i = 0, l = ite.length
 
-                        for ( i in ite = iterator.enumerate() )
+                        for ( ; i < l; i++ )
                           queries.push(ite[i])
                     }(attributes[i]))
 
-                  for ( i in ite = iterator.enumerate() ) {
+
+                  for ( i = 0, l = ite.length; i < l; i++ ) {
                       hit = (function(model){
                                 var i, l, key, value, hit
 
@@ -1004,9 +1055,9 @@
 
           , set: function(){
                 var models = this._models || []
-                  , iterator = new Iterator(models), ite, i
+                  , iterator = new Iterator(models), ite = iterator.enumerate(), i = 0, l = ite.length
 
-                for ( i in ite = iterator.enumerate() )
+                for ( ; i < l; i++ )
                   invoke(Model.prototype.set, arguments, ite[i][1])
 
                 return this
@@ -1014,37 +1065,65 @@
           , get: function(){
                 var models = this._models || []
                   , hits = []
-                  , iterator = new Iterator(models), ite, i
+                  , iterator = new Iterator(models), ite = iterator.enumerate(), i = 0, l = ite.length
 
-                for ( i in ite = iterator.enumerate() )
+                for ( ; i < l; i++ )
                   hits.push( invoke(Model.prototype.get, arguments, ite[i][1]) )
 
                 return hits
             }
+          , iterator: function(){
+                return new Iterator(this._models||[])
+            }
           , enumerate: function(){
-              var data = this._models || []
-                , copy = {}
-                , iterator = new Iterator(data), ite, i
-
-              for ( i in ite = iterator.enumerate() )
-                copy[ite[i][0]] = ite[i][1]
-
-              return copy
+                return this.iterator().enumerate()
           }
           , length: function(){
                 return (this._models || []).length
             }
         })
-    
-    root.sleipnir = function(a){
-        if ( typeof a === "function" )
-          return invoke(a, [ns])
-        if ( ns.hasOwnProperty(a) )
-          return ns[a]
-    }
-    
-    ;(function(sleipnir){
-        for ( var k in ns ) if ( ns.hasOwnProperty(k) )
-          sleipnir[k] = ns[k]
-    }(root.sleipnir))
+
+    root.namespace = (function(){
+        var ctx = root
+          , definer = function define(key, value){
+                if ( ctx.hasOwnProperty(key) )
+                  throw new TypeError("trying to overwrite an existing property")
+
+                ctx[key] = value
+
+                return value
+            }
+          , invoker = new Invoker({
+                $: ns
+              , $sleipnir: ns
+              , $def: definer
+              , $define: definer
+            })
+          , getContext = function(str){
+                var path = str.split(".")
+            }
+
+        return function(name, scope){
+            var pctx = ctx, rv
+
+            if ( ctx.hasOwnProperty(name) )
+              throw new TypeError("trying to overwrite an existing property")
+
+            if ( typeof name != "string" || typeof scope != "function" )
+              throw new Error("invalid argument(s)")
+
+            ctx = {}
+            rv = invoker.apply(scope)
+
+            if ( rv && typeof rv == "object" && rv.constructor !== Object )
+              ctx = rv
+
+            pctx[name] = ctx
+            ctx = pctx
+
+            return pctx[name]
+        }
+    }())
+
+    root.sleipnir = ns
 }(this))
