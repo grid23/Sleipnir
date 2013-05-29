@@ -1,6 +1,6 @@
 (function(root){ "use strict"
     var ns = {}
-      , version = ns.version = "ES3-0.5.11"
+      , version = ns.version = "ES3-0.5.12"
 
       , noop = function(){}
 
@@ -637,18 +637,12 @@
             }
         })
 
-      , Router = ns.Router = klass(EventEmitter, function(){
-            function dDispatcher(r, c){ return r === c }
-            function eNext(){
-                var self = this
-                setTimeout(function(){
-                  self.emit('error', "next() invoked on a non-last route handler (manage your routes handlers carefully)")
-                }, 0)
-            }
+      , Router = ns.Router = klass(EventEmitter, function(Super, statics){
+            statics.defaultDispatcher = function(r, c){ return r === c }
 
             return {
                 constructor: function(routes, dispatcher){
-                      var dispatcher = typeof arguments[arguments.length-1] == "function" ? arguments[arguments.length-1] : dDispatcher
+                      var dispatcher = typeof arguments[arguments.length-1] == "function" ? arguments[arguments.length-1] : Router.defaultDispatcher
                         , routes = arguments[0] && arguments[0].constructor == Object ? arguments[0] : null
 
                       this._routes = {}
@@ -673,10 +667,17 @@
                               if ( typeof handler == "function" )
                                 return _next = next, invoker.apply(handler, args, self)
                               else {
-                                for ( i = 0, l = handler.length -1; i<l; i++ )
-                                  _next = function(){ invoke(eNext, [], self) },
-                                  invoker.apply(handler[i], args, self)
-                                return _next = next, invoker.apply(handler[l], args, self)
+                                i = -1, l = handler.length - 1
+                                
+                                _next = function(){
+                                    if ( ++i < l )
+                                      invoker.apply(handler[i], args, self)
+                                    else
+                                      _next = next,
+                                      invoker.apply(handler[l], args, self)
+                                }
+                                
+                                _next()
                               }
                           }
 
@@ -1115,7 +1116,7 @@
             ctx = {}
             rv = invoker.apply(scope)
 
-            if ( rv && typeof rv == "object" && rv.constructor !== Object )
+            if ( rv )
               ctx = rv
 
             pctx[name] = ctx
