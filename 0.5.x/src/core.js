@@ -1,6 +1,6 @@
 (function(root){ "use strict"
     var ns = {}
-      , version = ns.version = "ES3-0.5.12"
+      , version = ns.version = "ES3-0.5.13"
 
       , noop = function(){}
 
