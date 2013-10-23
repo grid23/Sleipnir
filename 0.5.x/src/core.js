@@ -53,6 +53,14 @@
            return JSON
         }())
 
+      , hasObjectCreate = typeof Object.create == "function"
+      , inherit = function(object){
+          if(hasObjectCreate) return Object.create(object)
+          function K(){}
+          K.prototype = object
+          return new K()
+        }
+
       , serialize = ns.serialize = function(){
             var args = arguments.length > 1 && arguments || arguments[0]
               , iterator = new Iterator(args), ite = iterator.enumerate(), i = 0, l = ite.length
@@ -124,10 +132,7 @@
                     return constructor
                 }()) : function(){}
 
-              Class.prototype = {}
-              for ( k in superPrototype ) if ( superPrototype.hasOwnProperty(k) )
-                Class.prototype[k] = superPrototype[k]
-
+              Class.prototype = inherit(superPrototype)
 
               for ( k in prototype ) if ( prototype.hasOwnProperty(k) )
                 Class.prototype[k] = prototype[k]
@@ -135,13 +140,12 @@
               Class.prototype.constructor = Class
 
               Class.create = function(){
-                  var args = arguments
-                  function F(){
-                      return invoke(Class, args, this)
+                  var self = inherit(this.prototype)
+                    , contructor = this
+                  if(contructor) {
+                    contructor.apply(self, arguments)
                   }
-                  F.prototype = Class.prototype
-
-                  return new F
+                  return self
               }
 
               Class.extend = function(prototype){
